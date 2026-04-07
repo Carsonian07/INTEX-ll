@@ -17,7 +17,7 @@ export default function AdminLayout() {
       <aside className="w-60 flex-shrink-0 bg-hh-navy-dark flex flex-col">
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-5 py-4 border-b border-white/10">
-          <img src="/logo.png" alt="Harbored Hope" className="h-8 w-8 object-contain" />
+          <img src="/logo.png" alt="Harbored Hope" className="h-14 w-14 object-contain" />
           <div className="flex flex-col leading-tight">
             <span className="text-white font-serif text-sm font-medium">Harbored Hope</span>
             <span className="text-hh-gold text-[9px] font-semibold tracking-widest uppercase">Staff Portal</span>

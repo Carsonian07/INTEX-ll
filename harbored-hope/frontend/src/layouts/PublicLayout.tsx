@@ -23,7 +23,7 @@ export default function PublicLayout() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2.5">
-              <img src="/logo.png" alt="Harbored Hope" className="h-9 w-9 object-contain" />
+              <img src="/logo.png" alt="Harbored Hope" className="h-14 w-14 object-contain" />
               <div className="flex flex-col leading-tight">
                 <span className="text-hh-navy dark:text-white font-serif text-base font-medium">Harbored</span>
                 <span className="text-hh-gold text-[10px] font-semibold tracking-widest uppercase">Hope</span>
@@ -93,7 +93,7 @@ export default function PublicLayout() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center gap-2.5 mb-3">
-                <img src="/logo.png" alt="Harbored Hope" className="h-8 w-8 object-contain" />
+                <img src="/logo.png" alt="Harbored Hope" className="h-14 w-14 object-contain" />
                 <span className="font-serif text-base">Harbored Hope</span>
               </div>
               <p className="text-sm text-gray-400 leading-relaxed">Providing safe homes and rehabilitation for girls who have survived trafficking and abuse in the Philippines.</p>

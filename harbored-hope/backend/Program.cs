@@ -156,6 +156,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 // ─── Seed roles and default admin on first run ────────────────────────────────
-await SeedData.InitializeAsync(app.Services);
+//await SeedData.InitializeAsync(app.Services);
 
 app.Run();
