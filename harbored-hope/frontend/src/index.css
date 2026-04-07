@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: #374151;
+  }
+}
+
+@layer utilities {
+  /* Reusable input class used in forms */
+  .input {
+    @apply w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-700 rounded-lg text-sm
+           bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+           focus:outline-none focus:ring-2 focus:ring-hh-ocean focus:border-transparent
+           transition-colors;
+  }
+
+  /* Reusable label class */
+  .label {
+    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5;
+  }
+
+  /* Card wrapper */
+  .card {
+    @apply bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    @apply bg-hh-navy text-white text-sm font-medium px-4 py-2.5 rounded-lg
+           hover:bg-hh-navy-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+
+  /* Secondary button */
+  .btn-secondary {
+    @apply border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400
+           text-sm px-4 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors;
+  }
+
+  /* Danger button */
+  .btn-danger {
+    @apply bg-red-600 text-white text-sm font-medium px-4 py-2.5 rounded-lg
+           hover:bg-red-700 transition-colors;
+  }
+
+  /* Badge variants */
+  .badge-navy {
+    @apply text-xs px-2 py-0.5 rounded-full font-medium bg-hh-navy-light text-hh-navy
+           dark:bg-hh-ocean/20 dark:text-hh-ocean;
+  }
+
+  .badge-success {
+    @apply text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-800
+           dark:bg-green-900/30 dark:text-green-400;
+  }
+
+  .badge-warning {
+    @apply text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-800
+           dark:bg-yellow-900/30 dark:text-yellow-400;
+  }
+
+  .badge-danger {
+    @apply text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-800
+           dark:bg-red-900/30 dark:text-red-400;
+  }
+}

@@ -1,0 +1,144 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { api, PublicStats } from '../../lib/api';
+
+export default function HomePage() {
+  const [stats, setStats] = useState<PublicStats | null>(null);
+
+  useEffect(() => {
+    api.dashboard.public().then(setStats).catch(() => {});
+  }, []);
+
+  return (
+    <div>
+      {/* Hero */}
+      <section className="bg-hh-navy-light dark:bg-gray-900 py-20 px-4 text-center border-b border-gray-200 dark:border-gray-800">
+        <p className="text-xs font-semibold text-hh-ocean uppercase tracking-widest mb-4">Safe homes · Philippines</p>
+        <h1 className="font-serif text-4xl md:text-5xl font-medium text-hh-navy dark:text-white leading-tight max-w-2xl mx-auto mb-5">
+          Every girl deserves a safe place to heal
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400 max-w-lg mx-auto mb-8 leading-relaxed">
+          Harbored Hope provides shelter, counseling, and education for girls who have survived trafficking and abuse.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Link to="/register" className="bg-hh-navy text-white font-medium px-6 py-3 rounded-lg hover:bg-hh-navy-dark transition-colors">
+            Support a safehouse
+          </Link>
+          <Link to="/impact" className="border border-hh-navy text-hh-navy dark:text-white dark:border-white font-medium px-6 py-3 rounded-lg hover:bg-hh-navy/5 transition-colors">
+            See our impact
+          </Link>
+        </div>
+      </section>
+
+      {/* Stats bar */}
+      <section className="bg-hh-navy">
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-white/10">
+          {[
+            { value: stats ? stats.totalGirlsServed.toLocaleString() : '—', label: 'Girls served' },
+            { value: stats ? stats.activeSafehouses.toString() : '—', label: 'Active safehouses' },
+            { value: stats ? `${stats.reintegrationRate}%` : '—', label: 'Reintegration rate' },
+            { value: stats ? `$${Math.round(stats.totalRaisedUsd / 1000)}K` : '—', label: 'Raised this year' },
+          ].map(s => (
+            <div key={s.label} className="py-5 px-6 text-center">
+              <div className="text-2xl font-semibold text-hh-gold">{s.value}</div>
+              <div className="text-xs text-white/70 mt-1">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* How your donation helps */}
+      <section className="max-w-5xl mx-auto px-4 py-16">
+        <h2 className="font-serif text-2xl font-medium text-hh-navy dark:text-white mb-2">How your donation helps</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Every contribution directly supports girls across our safehouses</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {[
+            {
+              icon: (
+                <svg className="w-5 h-5" fill="none" stroke="#1B3A6B" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                </svg>
+              ),
+              bg: 'bg-hh-navy-light', label: 'Safe shelter',
+              desc: 'Secure housing and 24/7 staff care for every resident in our safehouses.'
+            },
+            {
+              icon: (
+                <svg className="w-5 h-5" fill="none" stroke="#2E86C1" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+                </svg>
+              ),
+              bg: 'bg-hh-ocean-light', label: 'Counseling',
+              desc: 'Structured process recordings and trauma-informed therapy sessions.'
+            },
+            {
+              icon: (
+                <svg className="w-5 h-5" fill="none" stroke="#C9961A" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                </svg>
+              ),
+              bg: 'bg-hh-gold-light', label: 'Education',
+              desc: 'Bridge programs, literacy support, and vocational training opportunities.'
+            },
+          ].map(card => (
+            <div key={card.label} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-5">
+              <div className={`w-9 h-9 ${card.bg} rounded-lg flex items-center justify-center mb-4`}>
+                {card.icon}
+              </div>
+              <h3 className="text-sm font-medium text-hh-navy dark:text-white mb-2">{card.label}</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{card.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Impact this month */}
+      <section className="bg-hh-navy-light dark:bg-gray-900 py-12 px-4">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="font-serif text-2xl font-medium text-hh-navy dark:text-white mb-2">Impact this month</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Real outcomes across all safehouses</p>
+          <div className="space-y-4 max-w-2xl">
+            {[
+              { label: 'Education progress', value: stats?.avgEducationProgress ?? 82, color: 'bg-hh-navy' },
+              { label: 'Average health score', value: stats ? Math.round(stats.avgHealthScore / 5 * 100) : 74, color: 'bg-hh-ocean' },
+              { label: 'Counseling sessions', value: 91, color: 'bg-hh-gold' },
+            ].map(bar => (
+              <div key={bar.label} className="flex items-center gap-4">
+                <span className="text-sm text-gray-600 dark:text-gray-300 w-40 shrink-0">{bar.label}</span>
+                <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className={`h-full ${bar.color} rounded-full`} style={{ width: `${bar.value}%` }} />
+                </div>
+                <span className="text-sm font-medium text-hh-navy dark:text-white w-10 text-right">{Math.round(bar.value)}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Donate CTA */}
+      <section className="bg-hh-navy-dark py-16 px-4 text-center">
+        <h2 className="font-serif text-3xl font-medium text-white mb-3">Be someone's safe harbor</h2>
+        <p className="text-sm text-white/70 max-w-md mx-auto mb-8 leading-relaxed">
+          Choose a monthly amount to directly fund shelter, healing, and education for girls in need.
+        </p>
+        <div className="flex flex-wrap gap-3 justify-center mb-6">
+          {['$10', '$25', '$50', 'Custom'].map((amt, i) => (
+            <button
+              key={amt}
+              className={`px-5 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                i === 1
+                  ? 'bg-hh-gold/20 border-hh-gold text-hh-gold'
+                  : 'border-hh-gold/40 text-hh-gold hover:border-hh-gold'
+              }`}
+            >
+              {amt}
+            </button>
+          ))}
+        </div>
+        <Link to="/register" className="inline-block bg-hh-gold text-white font-medium px-8 py-3 rounded-lg hover:bg-yellow-600 transition-colors">
+          Donate monthly
+        </Link>
+      </section>
+    </div>
+  );
+}

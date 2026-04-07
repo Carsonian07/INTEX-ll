@@ -1,0 +1,18 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.DotSettings.user
+
+## Secrets — NEVER commit these
+appsettings.Development.json
+appsettings.Production.json
+.env
+*.pfx
+secrets.json
+
+## Rider / VS
+.idea/
+*.sln.iml
