@@ -1,6 +1,116 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api, PublicStats } from '../../lib/api';
+
+// Each pair: [leftImage, rightImage] with per-image bg-position
+// Left images: face toward the right of the panel (near center box)
+// Right images: face toward the left of the panel (near center box)
+const imagePairs = [
+  [
+    { src: '/images/hero5.png', position: '50% 15%' }, // girl facing right
+    { src: '/images/hero3.jpg', position: '50% 15%' }, // girl facing left
+  ],
+  [
+    { src: '/images/hero1.jpg', position: '50% 12%' }, // girl, upper center
+    { src: '/images/hero2.jpg', position: '50% 15%' }, // two girls
+  ],
+  [
+    { src: '/images/hero4.jpg', position: '35% 20%' }, // group, show left faces
+    { src: '/images/hero6.jpg', position: '50% 15%' }, // group portrait
+  ],
+];
+
+function HeroCarousel() {
+  const [current, setCurrent] = useState(0);
+  const [prev, setPrev] = useState<number | null>(null);
+  const [transitioning, setTransitioning] = useState(false);
+
+  const advance = useCallback((next: number) => {
+    if (transitioning) return;
+    setTransitioning(true);
+    setPrev(current);
+    setCurrent(next);
+    setTimeout(() => {
+      setPrev(null);
+      setTransitioning(false);
+    }, 900);
+  }, [current, transitioning]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      advance((current + 1) % imagePairs.length);
+    }, 5500);
+    return () => clearInterval(id);
+  }, [current, advance]);
+
+  return (
+    <section className="relative h-[520px] md:h-[580px] overflow-hidden bg-hh-navy-dark">
+      {/* Image pair layers */}
+      {imagePairs.map((pair, i) => (
+        <div
+          key={i}
+          className="absolute inset-0"
+          style={{
+            opacity: i === current ? 1 : i === prev ? 0 : 0,
+            zIndex: i === current ? 2 : i === prev ? 1 : 0,
+            transition: 'opacity 900ms ease-in-out',
+          }}
+        >
+          {/* Left image */}
+          <div
+            className="absolute top-0 left-0 bottom-0 w-1/2 bg-cover"
+            style={{ backgroundImage: `url(${pair[0].src})`, backgroundPosition: pair[0].position }}
+          />
+          {/* Right image */}
+          <div
+            className="absolute top-0 right-0 bottom-0 w-1/2 bg-cover"
+            style={{ backgroundImage: `url(${pair[1].src})`, backgroundPosition: pair[1].position }}
+          />
+        </div>
+      ))}
+
+      {/* Center overlay — fades edges into center */}
+      <div className="absolute inset-0 z-10 pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse 38% 100% at 50% 50%, rgba(18,40,80,0.72) 0%, rgba(18,40,80,0.18) 70%, transparent 100%)' }}
+      />
+
+      {/* Caption */}
+      <div className="relative z-20 h-full flex flex-col items-center justify-center px-4 text-center">
+        <div className="max-w-sm mx-auto">
+          <p className="text-[11px] font-semibold text-hh-gold uppercase tracking-widest mb-3">Safe homes · Philippines</p>
+          <h1 className="font-serif text-3xl md:text-4xl font-medium text-white leading-snug mb-4 drop-shadow-lg">
+            Every girl deserves a safe place to heal
+          </h1>
+          <p className="text-sm text-white/80 leading-relaxed mb-6 drop-shadow">
+            Harbored Hope provides shelter, counseling, and education for girls who have survived trafficking and abuse.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link to="/register" className="bg-hh-gold text-white text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-yellow-600 transition-colors shadow-lg">
+              Support a safehouse
+            </Link>
+            <Link to="/impact" className="border border-white/70 text-white text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-white/10 transition-colors">
+              See our impact
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Dot indicators */}
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+        {imagePairs.map((_pair, i) => (
+          <button
+            key={i}
+            onClick={() => advance(i)}
+            className={`rounded-full transition-all duration-300 ${
+              i === current ? 'w-6 h-2 bg-white' : 'w-2 h-2 bg-white/50 hover:bg-white/75'
+            }`}
+            aria-label={`Go to slide ${i + 1}`}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default function HomePage() {
   const [stats, setStats] = useState<PublicStats | null>(null);
@@ -11,24 +121,8 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* Hero */}
-      <section className="bg-hh-navy-light dark:bg-gray-900 py-20 px-4 text-center border-b border-gray-200 dark:border-gray-800">
-        <p className="text-xs font-semibold text-hh-ocean uppercase tracking-widest mb-4">Safe homes · Philippines</p>
-        <h1 className="font-serif text-4xl md:text-5xl font-medium text-hh-navy dark:text-white leading-tight max-w-2xl mx-auto mb-5">
-          Every girl deserves a safe place to heal
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 max-w-lg mx-auto mb-8 leading-relaxed">
-          Harbored Hope provides shelter, counseling, and education for girls who have survived trafficking and abuse.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link to="/register" className="bg-hh-navy text-white font-medium px-6 py-3 rounded-lg hover:bg-hh-navy-dark transition-colors">
-            Support a safehouse
-          </Link>
-          <Link to="/impact" className="border border-hh-navy text-hh-navy dark:text-white dark:border-white font-medium px-6 py-3 rounded-lg hover:bg-hh-navy/5 transition-colors">
-            See our impact
-          </Link>
-        </div>
-      </section>
+      {/* Hero carousel */}
+      <HeroCarousel />
 
       {/* Stats bar */}
       <section className="bg-hh-navy">

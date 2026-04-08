@@ -1,6 +1,27 @@
 import { useEffect, useState } from 'react';
 import { api, PublicStats } from '../../lib/api';
 
+const IconHome = () => (
+  <svg className="w-5 h-5 text-hh-navy dark:text-white" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+  </svg>
+);
+const IconChat = () => (
+  <svg className="w-5 h-5 text-hh-ocean dark:text-white" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+  </svg>
+);
+const IconBook = () => (
+  <svg className="w-5 h-5 text-hh-gold dark:text-white" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+  </svg>
+);
+const IconScale = () => (
+  <svg className="w-5 h-5 text-gray-500 dark:text-white" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-2.031.352 5.988 5.988 0 01-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 01-2.031.352 5.989 5.989 0 01-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971z" />
+  </svg>
+);
+
 function MetricCard({ label, value, desc }: { label: string; value: string; desc?: string }) {
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-6 text-center">
@@ -79,14 +100,14 @@ export default function ImpactPage() {
             <h3 className="font-medium text-hh-navy dark:text-white mb-5">Services we provide</h3>
             <div className="space-y-4">
               {[
-                { emoji: '🏠', label: 'Caring', desc: 'Safe housing, meals, and 24/7 staff support' },
-                { emoji: '💬', label: 'Healing', desc: 'Trauma counseling, therapy, and process recordings' },
-                { emoji: '📚', label: 'Teaching', desc: 'Education programs, vocational training, and life skills' },
-                { emoji: '⚖️', label: 'Legal services', desc: 'Case management, referrals, and reintegration support' },
+                { Icon: IconHome,  label: 'Caring',        desc: 'Safe housing, meals, and 24/7 staff support' },
+                { Icon: IconChat,  label: 'Healing',       desc: 'Trauma counseling, therapy, and process recordings' },
+                { Icon: IconBook,  label: 'Teaching',      desc: 'Education programs, vocational training, and life skills' },
+                { Icon: IconScale, label: 'Legal services', desc: 'Case management, referrals, and reintegration support' },
               ].map(s => (
                 <div key={s.label} className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-hh-navy-light dark:bg-gray-800 flex items-center justify-center text-base flex-shrink-0">
-                    {s.emoji}
+                  <div className="w-9 h-9 rounded-lg bg-hh-navy-light dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+                    <s.Icon />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{s.label}</p>

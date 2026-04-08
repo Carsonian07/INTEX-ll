@@ -8,6 +8,7 @@ import ImpactPage from './pages/public/ImpactPage';
 import LoginPage from './pages/public/LoginPage';
 import RegisterPage from './pages/public/RegisterPage';
 import PrivacyPage from './pages/public/PrivacyPage';
+import NotFoundPage from './pages/public/NotFoundPage';
 
 // Donor pages
 import DonorDashboard from './pages/donor/DonorDashboard';
@@ -20,6 +21,7 @@ import ProcessRecordingPage from './pages/admin/ProcessRecordingPage';
 import HomeVisitationPage from './pages/admin/HomeVisitationPage';
 import DonorsPage from './pages/admin/DonorsPage';
 import ReportsPage from './pages/admin/ReportsPage';
+import SocialPostPlannerPage from './pages/admin/SocialPostPlannerPage';
 
 import PublicLayout from './layouts/PublicLayout';
 import AdminLayout from './layouts/AdminLayout';
@@ -61,10 +63,11 @@ export default function App() {
             <Route path="residents/:id/home-visitations" element={<HomeVisitationPage />} />
             <Route path="donors" element={<DonorsPage />} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="social-planner" element={<SocialPostPlannerPage />} />
           </Route>
 
-          {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* 404 */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

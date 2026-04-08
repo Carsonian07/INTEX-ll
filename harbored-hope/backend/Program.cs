@@ -93,6 +93,7 @@ builder.Services.AddCors(options =>
 });
 
 // ─── Application Services ─────────────────────────────────────────────────────
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<CsvSeederService>();
@@ -102,7 +103,10 @@ builder.Services.AddHttpClient("StorytellingApi", client =>
 });
 
 // ─── Controllers + Swagger ────────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o =>
+        o.JsonSerializerOptions.ReferenceHandler =
+            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
