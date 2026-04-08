@@ -21,6 +21,7 @@ import ProcessRecordingPage from './pages/admin/ProcessRecordingPage';
 import HomeVisitationPage from './pages/admin/HomeVisitationPage';
 import DonorsPage from './pages/admin/DonorsPage';
 import ReportsPage from './pages/admin/ReportsPage';
+import SocialPostPlannerPage from './pages/admin/SocialPostPlannerPage';
 
 import PublicLayout from './layouts/PublicLayout';
 import AdminLayout from './layouts/AdminLayout';
@@ -83,6 +84,7 @@ export default function App() {
             <Route path="residents/:id/home-visitations" element={<HomeVisitationPage />} />
             <Route path="donors" element={<DonorsPage />} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="social-planner" element={<SocialPostPlannerPage />} />
           </Route>
 
           {/* 404 */}

@@ -142,6 +142,23 @@ export const api = {
     delete: (id: number) => request(`/api/safehouses/${id}`, { method: 'DELETE' }),
   },
 
+  // ─── Social Planner ────────────────────────────────────────────────────────
+  socialPlanner: {
+    options: () => request<{
+      platforms: {value:string;count:number}[];
+      daysOfWeek: {value:string;count:number}[];
+      postTypes: {value:string;count:number}[];
+      mediaTypes: {value:string;count:number}[];
+      contentTopics: {value:string;count:number}[];
+      sentimentTones: {value:string;count:number}[];
+      callToActionTypes: {value:string;count:number}[];
+      campaignNames: {value:string;count:number}[];
+    }>('/api/social-planner/options'),
+    predictEffective:     (body: unknown) => request<{probability:number;prediction:number;label_col:string}>('/api/social-planner/predict/effective',     { method: 'POST', body: JSON.stringify(body) }),
+    predictEngagementRate:(body: unknown) => request<{prediction:number;target_col:string}>('/api/social-planner/predict/engagement-rate', { method: 'POST', body: JSON.stringify(body) }),
+    predictDonationValue: (body: unknown) => request<{prediction:number;target_col:string}>('/api/social-planner/predict/donation-value',  { method: 'POST', body: JSON.stringify(body) }),
+  },
+
   // ─── ML Stubs ──────────────────────────────────────────────────────────────
   ml: {
     reintegrationReadiness: (residentId: number) =>
@@ -149,6 +166,10 @@ export const api = {
     donorChurnRisk: () => request('/api/ml/donor-churn-risk'),
     socialMediaRecommendations: () => request('/api/ml/social-media-recommendations'),
     residentRiskFlags: () => request('/api/ml/resident-risk-flags'),
+    donorPredictions: (supporterIds: number[]) =>
+      request<DonorPrediction[]>('/api/ml/donor-predictions', {
+        method: 'POST', body: JSON.stringify(supporterIds),
+      }),
   },
 };
 
@@ -484,6 +505,12 @@ export interface Supporter {
   firstDonationDate?: string;
   acquisitionChannel?: string;
   createdAt: string;
+}
+
+export interface DonorPrediction {
+  supporterId: number;
+  ltv:       { probability: number; prediction: number };
+  retention: { probability: number; prediction: number };
 }
 
 export interface Safehouse {

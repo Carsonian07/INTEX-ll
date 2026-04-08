@@ -78,7 +78,6 @@ public class Donation
     public bool IsRecurring { get; set; }
     [MaxLength(100)] public string? CampaignName { get; set; }
     public string? Notes { get; set; }
-    public int? CreatedByPartnerId { get; set; }
     public int? ReferralPostId { get; set; }
 
     [ForeignKey("SupporterId")] public Supporter Supporter { get; set; } = null!;
@@ -332,7 +331,7 @@ public class SocialMediaPost
     public int Shares { get; set; }
     public int Saves { get; set; }
     public int ClickThroughs { get; set; }
-    public int? VideoViews { get; set; }
+    public decimal? VideoViews { get; set; }
     [Column(TypeName = "decimal(6,4)")] public decimal EngagementRate { get; set; }
     public int ProfileVisits { get; set; }
     public int DonationReferrals { get; set; }
