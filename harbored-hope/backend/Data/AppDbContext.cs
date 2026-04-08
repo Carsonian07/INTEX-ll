@@ -58,6 +58,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<Donation>(e =>
         {
+            e.Property(d => d.IsRecurring)
+                .HasConversion(
+                    value => value ? "True" : "False",
+                    value => string.Equals(value, "True", StringComparison.OrdinalIgnoreCase))
+                .HasMaxLength(5);
             e.HasOne(d => d.Supporter)
                 .WithMany(s => s.Donations)
                 .HasForeignKey(d => d.SupporterId)
