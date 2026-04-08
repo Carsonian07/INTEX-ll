@@ -23,11 +23,12 @@ export default function PublicLayout() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2.5">
-              <img src="/logo.png" alt="Harbored Hope" className="h-14 w-14 object-contain" />
-              <div className="flex flex-col leading-tight">
-                <span className="text-hh-navy dark:text-white font-serif text-base font-medium">Harbored</span>
-                <span className="text-hh-gold text-[10px] font-semibold tracking-widest uppercase">Hope</span>
+              <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center flex-shrink-0">
+                <img src="/logo-icon.png" alt="Harbored Hope" className="w-11 h-11 object-contain" />
               </div>
+              <span className="font-serif text-xl font-medium text-hh-navy dark:text-white tracking-tight">
+                Harbored <span className="text-hh-gold">Hope</span>
+              </span>
             </Link>
 
             {/* Desktop nav */}
@@ -67,8 +68,8 @@ export default function PublicLayout() {
           </div>
 
           {/* Mobile menu */}
-          {menuOpen && (
-            <div className="md:hidden pb-4 border-t border-gray-100 dark:border-gray-800 pt-3 space-y-2">
+          <div className={`md:hidden overflow-hidden transition-all duration-200 ease-in-out ${menuOpen ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="pb-4 border-t border-gray-100 dark:border-gray-800 pt-3 space-y-2">
               <Link to="/impact" onClick={() => setMenuOpen(false)} className="block px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300">Our impact</Link>
               <Link to="/privacy" onClick={() => setMenuOpen(false)} className="block px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300">Privacy</Link>
               {isAdmin && <Link to="/admin" onClick={() => setMenuOpen(false)} className="block px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300">Admin portal</Link>}
@@ -78,7 +79,7 @@ export default function PublicLayout() {
               }
               <Link to="/register" onClick={() => setMenuOpen(false)} className="block mx-2 mt-2 bg-hh-gold text-white text-sm font-medium px-4 py-2 rounded-md text-center">Donate</Link>
             </div>
-          )}
+          </div>
         </div>
       </nav>
 
@@ -93,7 +94,9 @@ export default function PublicLayout() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center gap-2.5 mb-3">
-                <img src="/logo.png" alt="Harbored Hope" className="h-14 w-14 object-contain" />
+                <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center flex-shrink-0">
+                  <img src="/logo-icon.png" alt="Harbored Hope" className="w-10 h-10 object-contain" />
+                </div>
                 <span className="font-serif text-base">Harbored Hope</span>
               </div>
               <p className="text-sm text-gray-400 leading-relaxed">Providing safe homes and rehabilitation for girls who have survived trafficking and abuse in the Philippines.</p>

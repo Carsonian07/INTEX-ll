@@ -8,6 +8,7 @@ import ImpactPage from './pages/public/ImpactPage';
 import LoginPage from './pages/public/LoginPage';
 import RegisterPage from './pages/public/RegisterPage';
 import PrivacyPage from './pages/public/PrivacyPage';
+import NotFoundPage from './pages/public/NotFoundPage';
 
 // Donor pages
 import DonorDashboard from './pages/donor/DonorDashboard';
@@ -84,8 +85,8 @@ export default function App() {
             <Route path="reports" element={<ReportsPage />} />
           </Route>
 
-          {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* 404 */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

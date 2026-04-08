@@ -15,7 +15,10 @@ export default {
       },
       fontFamily: {
         serif: ['Georgia', 'serif'],
-        sans:  ['Inter', 'system-ui', 'sans-serif'],
+        sans:  ['DM Sans', 'system-ui', 'sans-serif'],
+      },
+      transitionDuration: {
+        '900': '900ms',
       },
     },
   },
