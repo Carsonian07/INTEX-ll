@@ -79,6 +79,7 @@ public class ResidentsController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> GetById(int id)
     {
         var resident = await db.Residents
+            .AsNoTracking()
             .Include(r => r.Safehouse)
             .FirstOrDefaultAsync(r => r.ResidentId == id);
 
@@ -141,6 +142,7 @@ public class ResidentsController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> GetProcessRecordings(int id)
     {
         var recordings = await db.ProcessRecordings
+            .AsNoTracking()
             .Where(p => p.ResidentId == id)
             .OrderByDescending(p => p.SessionDate)
             .ToListAsync();
@@ -171,6 +173,7 @@ public class ResidentsController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> GetHomeVisitations(int id)
     {
         var visits = await db.HomeVisitations
+            .AsNoTracking()
             .Where(v => v.ResidentId == id)
             .OrderByDescending(v => v.VisitDate)
             .ToListAsync();

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using HarboredHope.API.Models;
 
 namespace HarboredHope.API.Data;
@@ -39,6 +40,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             foreach (var idx in entity.GetIndexes())
                 idx.SetDatabaseName(ToSnakeCase(idx.GetDatabaseName()));
         }
+
+        // The database stores all boolean fields as VARCHAR(5) ('True'/'False').
+        // Apply a global value converter so EF handles the cast automatically.
+        var boolConverter = new ValueConverter<bool, string>(
+            v => v ? "True" : "False",
+            v => v.Equals("True", StringComparison.OrdinalIgnoreCase)
+              || v.Equals("Yes",  StringComparison.OrdinalIgnoreCase)
+              || v == "1");
+
+        foreach (var entity in modelBuilder.Model.GetEntityTypes())
+            foreach (var prop in entity.GetProperties())
+                if (prop.ClrType == typeof(bool))
+                    prop.SetValueConverter(boolConverter);
 
         modelBuilder.Entity<Safehouse>(e =>
         {

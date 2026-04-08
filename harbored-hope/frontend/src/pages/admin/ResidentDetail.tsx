@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { api, Resident, ProcessRecording, HomeVisitation } from '../../lib/api';
+import { api, mlApi, buildResidentRiskInput, Resident, ProcessRecording, HomeVisitation, ResidentRiskResult } from '../../lib/api';
 
 type Tab = 'profile' | 'counseling' | 'visitations' | 'ml';
 
@@ -16,38 +16,54 @@ export default function ResidentDetail() {
   const [resident, setResident]       = useState<Resident | null>(null);
   const [recordings, setRecordings]   = useState<ProcessRecording[]>([]);
   const [visitations, setVisitations] = useState<HomeVisitation[]>([]);
-  const [mlData, setMlData]           = useState<{ readinessScore: number; label: string; topFeatures: { feature: string; importance: number }[] } | null>(null);
+  const [riskData, setRiskData]        = useState<ResidentRiskResult | null>(null);
+  const [riskLoading, setRiskLoading]  = useState(false);
+  const [riskError, setRiskError]      = useState<string | null>(null);
   const [tab, setTab]                 = useState<Tab>('profile');
   const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      api.residents.get(residentId),
-      api.residents.processRecordings.list(residentId),
-      api.residents.homeVisitations.list(residentId),
-    ]).then(([r, pr, hv]) => {
-      setResident(r);
-      setRecordings(pr);
-      setVisitations(hv);
-    }).finally(() => setLoading(false));
+    setLoading(true);
+    setError(null);
+    api.residents.get(residentId)
+      .then(r => {
+        setResident(r);
+        // Load sub-resources in parallel, but don't block the page if they fail
+        Promise.all([
+          api.residents.processRecordings.list(residentId).catch(() => [] as ProcessRecording[]),
+          api.residents.homeVisitations.list(residentId).catch(() => [] as HomeVisitation[]),
+        ]).then(([pr, hv]) => {
+          setRecordings(pr);
+          setVisitations(hv);
+        });
+      })
+      .catch(err => setError(err?.message ?? 'Failed to load resident'))
+      .finally(() => setLoading(false));
   }, [residentId]);
 
   useEffect(() => {
-    if (tab === 'ml') {
-      api.ml.reintegrationReadiness(residentId)
-        .then((d) => setMlData(d as typeof mlData))
-        .catch(() => {});
+    if (tab === 'ml' && resident && !riskData && !riskLoading && !riskError) {
+      setRiskLoading(true);
+      // Use the chronologically first recording (list is sorted descending, so last in array)
+      const firstRecording = recordings.length > 0 ? recordings[recordings.length - 1] : undefined;
+      const input = buildResidentRiskInput(resident, firstRecording);
+      mlApi.residentRisk(input)
+        .then(setRiskData)
+        .catch(err => setRiskError(err?.message ?? 'Prediction failed'))
+        .finally(() => setRiskLoading(false));
     }
-  }, [tab, residentId]);
+  }, [tab, resident, recordings, riskData, riskLoading, riskError]);
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-7 w-7 border-b-2 border-hh-navy"/></div>;
+  if (error) return <div className="p-8 text-red-500">Error: {error}</div>;
   if (!resident) return <div className="p-8 text-gray-400">Resident not found.</div>;
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'profile',    label: 'Case profile' },
     { key: 'counseling', label: `Counseling (${recordings.length})` },
-    { key: 'visitations',label: `Home visits (${visitations.length})` },
-    { key: 'ml',         label: 'ML insights' },
+    { key: 'visitations', label: `Home visits (${visitations.length})` },
+    { key: 'ml',         label: 'Predictive risk levels' },
   ];
 
   return (
@@ -204,44 +220,161 @@ export default function ResidentDetail() {
         </div>
       )}
 
-      {/* ML Insights tab */}
+      {/* Predictive risk levels tab */}
       {tab === 'ml' && (
-        <div className="space-y-5">
-          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-6">
-            <h3 className="font-medium text-hh-navy dark:text-white mb-1">Reintegration readiness</h3>
-            <p className="text-xs text-gray-400 mb-5">ML model prediction based on counseling, health, and education data</p>
-            {mlData ? (
-              <>
-                <div className="flex items-center gap-5 mb-5">
-                  <div className="w-24 h-24 rounded-full border-4 border-hh-ocean flex items-center justify-center">
-                    <span className="text-2xl font-semibold text-hh-navy dark:text-white">{Math.round(mlData.readinessScore * 100)}%</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-800 dark:text-gray-200">{mlData.label}</p>
-                    <p className="text-xs text-gray-400 mt-1">Model stub — wire up Python pipeline for live predictions</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Top contributing factors</p>
-                  <div className="space-y-2">
-                    {mlData.topFeatures.map(f => (
-                      <div key={f.feature} className="flex items-center gap-3">
-                        <span className="text-sm text-gray-600 dark:text-gray-400 w-48">{f.feature}</span>
-                        <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                          <div className="h-full bg-hh-ocean rounded-full" style={{ width: `${f.importance * 100}%` }} />
-                        </div>
-                        <span className="text-xs text-gray-400 w-8 text-right">{Math.round(f.importance * 100)}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-24">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-hh-navy" />
-              </div>
+        <div className="space-y-4">
+
+          {/* Context banner */}
+          <div className="bg-hh-navy-light dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
+            <p className="text-xs font-semibold text-hh-navy dark:text-gray-200 uppercase tracking-wider mb-1">About these scores</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              These are <strong className="text-gray-800 dark:text-gray-200">data-driven predictions</strong> produced by an ML model — independent of the social worker's initial or current risk assessment. They measure actual recovery outcomes across five dimensions using intake data, case history, and counseling records.
+            </p>
+            {recordings.length === 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                No counseling sessions recorded yet — prediction is based on intake data only and may be less accurate.
+              </p>
             )}
           </div>
+
+          {riskLoading && (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-hh-navy" />
+            </div>
+          )}
+
+          {riskError && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-600 dark:text-red-400">
+              {riskError}
+            </div>
+          )}
+
+          {riskData && (() => {
+            const highRiskScore = riskData.risk_score > 0.5;
+            const highStruggling = riskData.struggling_flag === 1;
+            const agree = highRiskScore === highStruggling;
+            const bothNegative = highRiskScore && highStruggling;
+            const bothPositive = !highRiskScore && !highStruggling;
+
+            return (
+              <div className="space-y-4">
+
+                {/* Risk score card */}
+                <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-5">
+                  <div className="flex items-start justify-between mb-1">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Risk score</p>
+                      <p className="text-2xl font-semibold text-hh-navy dark:text-white mt-0.5">
+                        {(riskData.risk_score * 100).toFixed(1)}
+                        <span className="text-sm font-normal text-gray-400 ml-1">/ 100</span>
+                      </p>
+                    </div>
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                      riskData.risk_score > 0.7 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                      riskData.risk_score > 0.4 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                      'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    }`}>
+                      {riskData.risk_score > 0.7 ? 'High risk' : riskData.risk_score > 0.4 ? 'Moderate risk' : 'Low risk'}
+                    </span>
+                  </div>
+                  <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mt-3 mb-1">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        riskData.risk_score > 0.7 ? 'bg-red-500' :
+                        riskData.risk_score > 0.4 ? 'bg-orange-400' : 'bg-green-500'
+                      }`}
+                      style={{ width: `${riskData.risk_score * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    Composite score across five recovery outcome dimensions measured from actual resident data — not a social worker estimate. Higher = worse outcomes observed.
+                  </p>
+                </div>
+
+                {/* Struggling probability card */}
+                <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-5">
+                  <div className="flex items-start justify-between mb-1">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Struggling probability</p>
+                      <p className="text-2xl font-semibold text-hh-navy dark:text-white mt-0.5">
+                        {(riskData.struggling_probability * 100).toFixed(1)}%
+                      </p>
+                    </div>
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                      highStruggling
+                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    }`}>
+                      {highStruggling ? 'Above threshold' : 'Below threshold'}
+                    </span>
+                  </div>
+                  <div className="relative h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-visible mt-3 mb-1">
+                    <div
+                      className={`h-full rounded-full transition-all ${highStruggling ? 'bg-red-500' : 'bg-hh-ocean'}`}
+                      style={{ width: `${Math.min(riskData.struggling_probability * 100, 100)}%` }}
+                    />
+                    <div
+                      className="absolute top-[-2px] h-[18px] w-0.5 bg-gray-500 dark:bg-gray-300"
+                      style={{ left: `${riskData.cls_threshold * 100}%` }}
+                      title={`Threshold: ${(riskData.cls_threshold * 100).toFixed(0)}%`}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-1 mb-2">
+                    <span>0%</span>
+                    <span>Threshold: {(riskData.cls_threshold * 100).toFixed(0)}%</span>
+                    <span>100%</span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Probability that this resident falls in the top 25% worst outcomes compared to all residents. The model flags anyone above {(riskData.cls_threshold * 100).toFixed(0)}% as struggling.
+                  </p>
+                </div>
+
+                {/* Conclusion card */}
+                <div className={`rounded-xl p-5 border ${
+                  bothNegative  ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
+                  bothPositive  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' :
+                                  'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl flex-shrink-0 mt-0.5">
+                      {bothNegative ? '🔴' : bothPositive ? '🟢' : '🟡'}
+                    </span>
+                    <div>
+                      <p className={`font-semibold text-sm mb-1 ${
+                        bothNegative ? 'text-red-700 dark:text-red-400' :
+                        bothPositive ? 'text-green-700 dark:text-green-400' :
+                                       'text-amber-700 dark:text-amber-400'
+                      }`}>
+                        {bothNegative ? 'Action needed' : bothPositive ? 'Outcome looks positive' : 'Inconclusive result'}
+                      </p>
+                      <p className={`text-xs leading-relaxed ${
+                        bothNegative ? 'text-red-600 dark:text-red-300' :
+                        bothPositive ? 'text-green-600 dark:text-green-300' :
+                                       'text-amber-700 dark:text-amber-300'
+                      }`}>
+                        {bothNegative &&
+                          'Both the risk score and struggling probability indicate this resident is experiencing poor outcomes. Consider reviewing their intervention plan and increasing support.'}
+                        {bothPositive &&
+                          'Both model signals agree this resident is tracking well. Outcomes across all five dimensions appear within a healthy range compared to peers.'}
+                        {!agree &&
+                          `The two model signals disagree — the risk score is ${highRiskScore ? 'elevated' : 'low'} but the struggling probability is ${highStruggling ? 'above' : 'below'} threshold. These measures capture different aspects of recovery; review both alongside the social worker's assessment before drawing conclusions.`}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => { setRiskData(null); setRiskError(null); }}
+                    className="text-xs text-hh-ocean hover:underline"
+                  >
+                    Re-run prediction
+                  </button>
+                </div>
+
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

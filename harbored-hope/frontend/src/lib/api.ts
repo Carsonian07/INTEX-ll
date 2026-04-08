@@ -152,6 +152,123 @@ export const api = {
   },
 };
 
+// ─── ML API (proxied through backend to avoid CORS) ───────────────────────────
+async function mlRequest<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, { method: 'POST', body: JSON.stringify(body) });
+}
+
+// Emotional state → valence score (0 = very negative, 1 = very positive)
+const VALENCE_MAP: Record<string, number> = {
+  Happy: 0.9, Joyful: 0.9, Confident: 0.85, Hopeful: 0.8, Grateful: 0.8,
+  Calm: 0.75, Content: 0.75, Peaceful: 0.75, Relaxed: 0.7,
+  Neutral: 0.5, Indifferent: 0.5,
+  Confused: 0.35, Worried: 0.3,
+  Sad: 0.2, Withdrawn: 0.2, Frustrated: 0.2,
+  Anxious: 0.2, Fearful: 0.15, Angry: 0.15,
+  Distressed: 0.1, Depressed: 0.1, Overwhelmed: 0.1,
+};
+
+function getValence(state: string): number {
+  if (!state) return 0.5;
+  const key = Object.keys(VALENCE_MAP).find(k => state.toLowerCase().includes(k.toLowerCase()));
+  return key ? VALENCE_MAP[key] : 0.5;
+}
+
+const RISK_ORD: Record<string, number> = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+
+export interface ResidentRiskInput {
+  age_months?: number;
+  risk_level_ord?: number;
+  case_category?: string;
+  referral_source?: string;
+  birth_status?: string;
+  sub_cat_orphaned?: number;
+  sub_cat_trafficked?: number;
+  sub_cat_child_labor?: number;
+  sub_cat_physical_abuse?: number;
+  sub_cat_sexual_abuse?: number;
+  sub_cat_osaec?: number;
+  sub_cat_cicl?: number;
+  sub_cat_at_risk?: number;
+  sub_cat_street_child?: number;
+  sub_cat_child_with_hiv?: number;
+  is_pwd?: number;
+  has_special_needs?: number;
+  family_is_4ps?: number;
+  family_solo_parent?: number;
+  family_indigenous?: number;
+  family_parent_pwd?: number;
+  family_informal_settler?: number;
+  session_type?: string;
+  session_duration_min?: number;
+  emo_state_obs?: string;
+  emo_state_end?: string;
+  emo_obs_valence?: number;
+  emo_end_valence?: number;
+  emo_improved?: number;
+  first_progress_noted?: number;
+  first_concerns_flagged?: number;
+  first_referral_made?: number;
+}
+
+export interface ResidentRiskResult {
+  risk_score: number;
+  struggling_probability: number;
+  struggling_flag: number;
+  cls_threshold: number;
+}
+
+export function buildResidentRiskInput(resident: Resident, firstRecording?: ProcessRecording): ResidentRiskInput {
+  const dob = new Date(resident.dateOfBirth);
+  const admitted = new Date(resident.dateOfAdmission);
+  const ageMonths = Math.floor((admitted.getTime() - dob.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+
+  const obsValence = firstRecording ? getValence(firstRecording.emotionalStateObserved) : undefined;
+  const endValence = firstRecording ? getValence(firstRecording.emotionalStateEnd) : undefined;
+
+  return {
+    age_months:             ageMonths,
+    risk_level_ord:         RISK_ORD[resident.initialRiskLevel] ?? 2,
+    case_category:          resident.caseCategory,
+    referral_source:        resident.referralSource,
+    birth_status:           resident.birthStatus,
+    sub_cat_orphaned:       resident.subCatOrphaned ? 1 : 0,
+    sub_cat_trafficked:     resident.subCatTrafficked ? 1 : 0,
+    sub_cat_child_labor:    resident.subCatChildLabor ? 1 : 0,
+    sub_cat_physical_abuse: resident.subCatPhysicalAbuse ? 1 : 0,
+    sub_cat_sexual_abuse:   resident.subCatSexualAbuse ? 1 : 0,
+    sub_cat_osaec:          resident.subCatOsaec ? 1 : 0,
+    sub_cat_cicl:           resident.subCatCicl ? 1 : 0,
+    sub_cat_at_risk:        resident.subCatAtRisk ? 1 : 0,
+    sub_cat_street_child:   resident.subCatStreetChild ? 1 : 0,
+    sub_cat_child_with_hiv: resident.subCatChildWithHiv ? 1 : 0,
+    is_pwd:                 resident.isPwd ? 1 : 0,
+    has_special_needs:      resident.hasSpecialNeeds ? 1 : 0,
+    family_is_4ps:          resident.familyIs4Ps ? 1 : 0,
+    family_solo_parent:     resident.familySoloParent ? 1 : 0,
+    family_indigenous:      resident.familyIndigenous ? 1 : 0,
+    family_parent_pwd:      resident.familyParentPwd ? 1 : 0,
+    family_informal_settler: resident.familyInformalSettler ? 1 : 0,
+    ...(firstRecording && {
+      session_type:          firstRecording.sessionType,
+      session_duration_min:  firstRecording.sessionDurationMinutes,
+      emo_state_obs:         firstRecording.emotionalStateObserved,
+      emo_state_end:         firstRecording.emotionalStateEnd,
+      emo_obs_valence:       obsValence,
+      emo_end_valence:       endValence,
+      emo_improved:          (endValence! > obsValence!) ? 1 : 0,
+      first_progress_noted:  firstRecording.progressNoted ? 1 : 0,
+      first_concerns_flagged: firstRecording.concernsFlagged ? 1 : 0,
+      first_referral_made:   firstRecording.referralMade ? 1 : 0,
+    }),
+  };
+}
+
+export const mlApi = {
+  residentRisk: (input: ResidentRiskInput) =>
+    mlRequest<ResidentRiskResult>('/api/ml/resident-risk', input),
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface LoginResponse {
   token?: string;

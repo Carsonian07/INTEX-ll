@@ -151,7 +151,7 @@ public class Resident
     [MaxLength(200)] public string? SpecialNeedsDiagnosis { get; set; }
 
     // Family profile
-    public bool FamilyIs4Ps { get; set; }
+    [Column("family_is_4ps")] public bool FamilyIs4Ps { get; set; }
     public bool FamilySoloParent { get; set; }
     public bool FamilyIndigenous { get; set; }
     public bool FamilyParentPwd { get; set; }

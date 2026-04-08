@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,8 +12,22 @@ namespace HarboredHope.API.Controllers;
 [ApiController]
 [Route("api/ml")]
 [Authorize(Roles = "Admin,Staff")]
-public class MlController : ControllerBase
+public class MlController(IHttpClientFactory httpClientFactory) : ControllerBase
 {
+    private const string MlApiBase = "https://harboredhope-ml-api.azurewebsites.net";
+
+    // ── POST /api/ml/resident-risk ────────────────────────────────────────────
+    /// Proxies to the external ML API — avoids CORS preflight from the browser.
+    [HttpPost("resident-risk")]
+    public async Task<IActionResult> ResidentRisk([FromBody] JsonElement body)
+    {
+        var client = httpClientFactory.CreateClient();
+        var content = new StringContent(body.GetRawText(), Encoding.UTF8, "application/json");
+        var response = await client.PostAsync($"{MlApiBase}/predict/resident/risk", content);
+        var json = await response.Content.ReadAsStringAsync();
+        return Content(json, "application/json");
+    }
+
     // ── POST /api/ml/reintegration-readiness ──────────────────────────────────
     /// Predicts whether a resident is ready for reintegration.
     /// Input: residentId. Output: score 0-1, label, top features.
