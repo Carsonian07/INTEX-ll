@@ -96,8 +96,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
+const loadingFallback: AuthState = {
+  user: null, token: null, loading: true,
+  isAdmin: false, isDonor: false, isStaff: false,
+  theme: 'light',
+  login: async () => {}, logout: () => {}, toggleTheme: () => {},
+};
+
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) {
+    if (import.meta.env.DEV) return loadingFallback;
+    throw new Error('useAuth must be used within AuthProvider');
+  }
   return ctx;
 }

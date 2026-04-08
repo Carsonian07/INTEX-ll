@@ -50,7 +50,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src="/logo.png" alt="Harbored Hope" className="h-14 w-14 mx-auto mb-4 object-contain" />
+          <div className="w-14 h-14 rounded-full bg-white shadow mx-auto mb-4 flex items-center justify-center">
+            <img src="/logo-icon.png" alt="Harbored Hope" className="w-12 h-12 object-contain" />
+          </div>
           <h1 className="font-serif text-2xl font-medium text-hh-navy dark:text-white">
             {step === 'mfa' ? 'Two-factor verification' : 'Welcome back'}
           </h1>

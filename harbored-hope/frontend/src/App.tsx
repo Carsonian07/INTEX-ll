@@ -1,6 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { ReactNode } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { RequireAuth, RedirectIfAuthed } from './components/RouteGuards';
 
 // Public pages
 import HomePage from './pages/public/HomePage';
@@ -8,6 +8,7 @@ import ImpactPage from './pages/public/ImpactPage';
 import LoginPage from './pages/public/LoginPage';
 import RegisterPage from './pages/public/RegisterPage';
 import PrivacyPage from './pages/public/PrivacyPage';
+import NotFoundPage from './pages/public/NotFoundPage';
 
 // Donor pages
 import DonorDashboard from './pages/donor/DonorDashboard';
@@ -22,30 +23,10 @@ import DonorsPage from './pages/admin/DonorsPage';
 import ReportsPage from './pages/admin/ReportsPage';
 import UsersPage from './pages/admin/UsersPage';
 import SecurityPage from './pages/shared/SecurityPage';
+import SocialPostPlannerPage from './pages/admin/SocialPostPlannerPage';
 
 import PublicLayout from './layouts/PublicLayout';
 import AdminLayout from './layouts/AdminLayout';
-
-// ─── Route Guards ─────────────────────────────────────────────────────────────
-function RequireAuth({ children, role }: { children: ReactNode; role?: 'Admin' | 'Donor' | 'Staff' }) {
-  const { user, loading, isAdmin, isDonor, isStaff } = useAuth();
-  if (loading) return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-hh-navy" /></div>;
-  if (!user) return <Navigate to="/login" replace />;
-  if (role === 'Admin' && !isAdmin) return <Navigate to="/" replace />;
-  if (role === 'Donor' && !isDonor && !isAdmin) return <Navigate to="/" replace />;
-  if (role === 'Staff' && !isStaff) return <Navigate to="/" replace />;
-  return <>{children}</>;
-}
-
-function RedirectIfAuthed({ children }: { children: ReactNode }) {
-  const { user, loading, isAdmin, isDonor } = useAuth();
-  if (loading) return null;
-  if (user) {
-    if (isAdmin) return <Navigate to="/admin" replace />;
-    if (isDonor) return <Navigate to="/donor" replace />;
-  }
-  return <>{children}</>;
-}
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
@@ -86,11 +67,13 @@ export default function App() {
             <Route path="donors" element={<DonorsPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="users" element={<RequireAuth role="Admin"><UsersPage /></RequireAuth>} />
+            <Route path="social-planner" element={<SocialPostPlannerPage />} />
+            <Route path="users" element={<RequireAuth role="Admin"><UsersPage /></RequireAuth>} />
             <Route path="security" element={<SecurityPage />} />
           </Route>
 
-          {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* 404 */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

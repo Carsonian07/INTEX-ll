@@ -53,7 +53,9 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-hh-navy-light dark:bg-gray-950 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img src="/logo.png" alt="Harbored Hope" className="h-14 w-14 mx-auto mb-4 object-contain" />
+          <div className="w-14 h-14 rounded-full bg-white shadow mx-auto mb-4 flex items-center justify-center">
+            <img src="/logo-icon.png" alt="Harbored Hope" className="w-12 h-12 object-contain" />
+          </div>
           <h1 className="font-serif text-2xl font-medium text-hh-navy dark:text-white">Create your account</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Join our community of supporters</p>
         </div>
