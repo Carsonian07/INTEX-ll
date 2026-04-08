@@ -1,6 +1,9 @@
 using HarboredHope.API.Data;
 using HarboredHope.API.Models;
+using System.IdentityModel.Tokens.Jwt;
+using System.Data;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -10,7 +13,7 @@ namespace HarboredHope.API.Controllers;
 [ApiController]
 [Route("api/donations")]
 [Authorize]
-public class DonationsController(AppDbContext db) : ControllerBase
+public class DonationsController(AppDbContext db, UserManager<AppUser> userManager) : ControllerBase
 {
     // ── GET /api/donations ────────────────────────────────────────────────────
     // Admin sees all; donor sees only their own
@@ -28,10 +31,10 @@ public class DonationsController(AppDbContext db) : ControllerBase
         // Donors can only see their own donations
         if (User.IsInRole("Donor"))
         {
-            var supporterIdClaim = User.FindFirst("supporterId")?.Value;
-            if (!int.TryParse(supporterIdClaim, out var sid))
+            var sid = await ResolveDonorSupporterIdAsync();
+            if (sid is null)
                 return Forbid();
-            query = query.Where(d => d.SupporterId == sid);
+            query = query.Where(d => d.SupporterId == sid.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(type))
@@ -50,7 +53,7 @@ public class DonationsController(AppDbContext db) : ControllerBase
             {
                 DonationId    = d.DonationId,
                 SupporterId   = d.SupporterId,
-                DisplayName   = d.Supporter.DisplayName,
+                DisplayName   = d.Supporter != null ? d.Supporter.DisplayName : "",
                 DonationType  = d.DonationType,
                 DonationDate  = d.DonationDate,
                 Amount        = d.Amount,
@@ -79,8 +82,8 @@ public class DonationsController(AppDbContext db) : ControllerBase
         // Donors can only view their own
         if (User.IsInRole("Donor"))
         {
-            var supporterIdClaim = User.FindFirst("supporterId")?.Value;
-            if (!int.TryParse(supporterIdClaim, out var sid) || donation.SupporterId != sid)
+            var sid = await ResolveDonorSupporterIdAsync();
+            if (sid is null || donation.SupporterId != sid.Value)
                 return Forbid();
         }
 
@@ -98,9 +101,10 @@ public class DonationsController(AppDbContext db) : ControllerBase
 
         if (User.IsInRole("Donor"))
         {
-            var claim = User.FindFirst("supporterId")?.Value;
-            if (!int.TryParse(claim, out supporterId))
+            var sid = await ResolveDonorSupporterIdAsync();
+            if (sid is null)
                 return Forbid();
+            supporterId = sid.Value;
         }
         else
         {
@@ -122,18 +126,54 @@ public class DonationsController(AppDbContext db) : ControllerBase
             Notes         = req.Notes,
         };
 
+        await AssignManualKeyIfNeededAsync("donations", "donation_id", id => donation.DonationId = id);
         db.Donations.Add(donation);
 
         // Update supporter's first donation date if needed
         var supporter = await db.Supporters.FindAsync(supporterId);
-        if (supporter is not null && supporter.FirstDonationDate is null)
+        if (supporter is not null)
         {
-            supporter.FirstDonationDate = DateOnly.FromDateTime(DateTime.Today);
+            if (supporter.FirstDonationDate is null)
+            {
+                supporter.FirstDonationDate = DateOnly.FromDateTime(DateTime.Today);
+            }
+
+            if (!string.IsNullOrWhiteSpace(req.DonorName))
+            {
+                supporter.DisplayName = TrimTo(req.DonorName, 17) ?? supporter.DisplayName;
+                supporter.FirstName = TrimTo(
+                    req.DonorName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(),
+                    6);
+            }
+
+            if (!string.IsNullOrWhiteSpace(req.Phone))
+                supporter.Phone = TrimTo(req.Phone, 17);
+
+            if (!string.IsNullOrWhiteSpace(req.Email))
+                supporter.Email = TrimTo(req.Email, 37);
+
+            if (!string.IsNullOrWhiteSpace(req.Region))
+                supporter.Region = TrimTo(req.Region, 8);
+
+            if (!string.IsNullOrWhiteSpace(req.Country))
+                supporter.Country = TrimTo(req.Country, 11);
         }
 
         await db.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetById), new { id = donation.DonationId }, donation);
+        return CreatedAtAction(nameof(GetById), new { id = donation.DonationId }, new DonationListDto
+        {
+            DonationId    = donation.DonationId,
+            SupporterId   = donation.SupporterId,
+            DisplayName   = supporter?.DisplayName ?? "",
+            DonationType  = donation.DonationType,
+            DonationDate  = donation.DonationDate,
+            Amount        = donation.Amount,
+            CurrencyCode  = donation.CurrencyCode,
+            CampaignName  = donation.CampaignName,
+            IsRecurring   = donation.IsRecurring,
+            ChannelSource = donation.ChannelSource,
+        });
     }
 
     // ── PUT /api/donations/{id} ───────────────────────────────────────────────
@@ -164,6 +204,140 @@ public class DonationsController(AppDbContext db) : ControllerBase
         db.Donations.Remove(donation);
         await db.SaveChangesAsync();
         return NoContent();
+    }
+
+    private async Task<int?> ResolveDonorSupporterIdAsync()
+    {
+        var supporterIdClaim = User.FindFirst("supporterId")?.Value;
+        if (int.TryParse(supporterIdClaim, out var sid))
+            return sid;
+
+        var user = await ResolveCurrentUserAsync();
+        if (user == null)
+            return null;
+
+        if (user.SupporterId.HasValue)
+            return user.SupporterId.Value;
+
+        Supporter? supporter = null;
+        if (!string.IsNullOrWhiteSpace(user.Email))
+        {
+            supporter = await db.Supporters.FirstOrDefaultAsync(s => s.Email == user.Email);
+        }
+
+        if (supporter == null)
+        {
+            supporter = new Supporter
+            {
+                SupporterType = TrimTo("Individual", 19),
+                DisplayName = TrimTo(user.DisplayName ?? user.Email ?? "Donor", 17),
+                FirstName = TrimTo(user.DisplayName?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(), 6),
+                RelationshipType = TrimTo("Donor", 19),
+                Region = TrimTo("Unknown", 8),
+                Country = TrimTo("USA", 11),
+                Email = TrimTo(user.Email ?? "unknown@local", 37),
+                Phone = TrimTo("Unknown", 17),
+                Status = TrimTo("Active", 8),
+                AcquisitionChannel = TrimTo("Direct", 15),
+                CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
+            };
+
+            await AssignManualKeyIfNeededAsync("supporters", "supporter_id", id => supporter.SupporterId = id);
+            db.Supporters.Add(supporter);
+            await db.SaveChangesAsync();
+        }
+
+        user.SupporterId = supporter.SupporterId;
+        await userManager.UpdateAsync(user);
+        return supporter.SupporterId;
+    }
+
+    private async Task<AppUser?> ResolveCurrentUserAsync()
+    {
+        var user = await userManager.GetUserAsync(User);
+        if (user != null)
+            return user;
+
+        var userId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier) ??
+            User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            user = await userManager.FindByIdAsync(userId);
+            if (user != null)
+                return user;
+        }
+
+        var email =
+            User.FindFirstValue(ClaimTypes.Email) ??
+            User.FindFirstValue(JwtRegisteredClaimNames.Email);
+
+        if (!string.IsNullOrWhiteSpace(email))
+            return await userManager.FindByEmailAsync(email);
+
+        return null;
+    }
+
+    private static string? TrimTo(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return value;
+
+        return value.Length <= maxLength ? value : value[..maxLength];
+    }
+
+    private async Task AssignManualKeyIfNeededAsync(string tableName, string columnName, Action<int> assignKey)
+    {
+        if (await ColumnIsIdentityAsync(tableName, columnName))
+            return;
+
+        assignKey(await GetNextIntKeyAsync(tableName, columnName));
+    }
+
+    private async Task<bool> ColumnIsIdentityAsync(string tableName, string columnName)
+    {
+        var connection = db.Database.GetDbConnection();
+        var shouldClose = connection.State != ConnectionState.Open;
+        if (shouldClose)
+            await connection.OpenAsync();
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                $"SELECT CAST(COLUMNPROPERTY(OBJECT_ID('dbo.{tableName}'), '{columnName}', 'IsIdentity') AS int)";
+
+            var result = await command.ExecuteScalarAsync();
+            return result != null && result != DBNull.Value && Convert.ToInt32(result) == 1;
+        }
+        finally
+        {
+            if (shouldClose)
+                await connection.CloseAsync();
+        }
+    }
+
+    private async Task<int> GetNextIntKeyAsync(string tableName, string columnName)
+    {
+        var connection = db.Database.GetDbConnection();
+        var shouldClose = connection.State != ConnectionState.Open;
+        if (shouldClose)
+            await connection.OpenAsync();
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = $"SELECT ISNULL(MAX([{columnName}]), 0) + 1 FROM [dbo].[{tableName}]";
+
+            var result = await command.ExecuteScalarAsync();
+            return Convert.ToInt32(result);
+        }
+        finally
+        {
+            if (shouldClose)
+                await connection.CloseAsync();
+        }
     }
 }
 
@@ -279,4 +453,9 @@ public class CreateDonationRequest
     public string? CampaignName { get; set; }
     public string? ChannelSource { get; set; }
     public string? Notes { get; set; }
+    public string? DonorName { get; set; }
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
+    public string? Region { get; set; }
+    public string? Country { get; set; }
 }

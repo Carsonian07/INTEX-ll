@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { ReactNode } from 'react';
+import { AuthProvider } from './context/AuthContext';
+import { RequireAuth, RedirectIfAuthed } from './components/RouteGuards';
 
 // Public pages
 import HomePage from './pages/public/HomePage';
@@ -25,27 +25,6 @@ import SocialPostPlannerPage from './pages/admin/SocialPostPlannerPage';
 
 import PublicLayout from './layouts/PublicLayout';
 import AdminLayout from './layouts/AdminLayout';
-
-// ─── Route Guards ─────────────────────────────────────────────────────────────
-function RequireAuth({ children, role }: { children: ReactNode; role?: 'Admin' | 'Donor' | 'Staff' }) {
-  const { user, loading, isAdmin, isDonor, isStaff } = useAuth();
-  if (loading) return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-hh-navy" /></div>;
-  if (!user) return <Navigate to="/login" replace />;
-  if (role === 'Admin' && !isAdmin) return <Navigate to="/" replace />;
-  if (role === 'Donor' && !isDonor && !isAdmin) return <Navigate to="/" replace />;
-  if (role === 'Staff' && !isStaff) return <Navigate to="/" replace />;
-  return <>{children}</>;
-}
-
-function RedirectIfAuthed({ children }: { children: ReactNode }) {
-  const { user, loading, isAdmin, isDonor } = useAuth();
-  if (loading) return null;
-  if (user) {
-    if (isAdmin) return <Navigate to="/admin" replace />;
-    if (isDonor) return <Navigate to="/donor" replace />;
-  }
-  return <>{children}</>;
-}
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {

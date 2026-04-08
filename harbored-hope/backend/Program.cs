@@ -97,6 +97,10 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<CsvSeederService>();
+builder.Services.AddHttpClient("StorytellingApi", client =>
+{
+    client.BaseAddress = new Uri("https://lighthouse-storytelling.azurewebsites.net/");
+});
 
 // ─── Controllers + Swagger ────────────────────────────────────────────────────
 builder.Services.AddControllers()
@@ -125,6 +129,12 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+    await authDb.Database.MigrateAsync();
+}
 
 // ─── HTTPS / HSTS ─────────────────────────────────────────────────────────────
 if (!app.Environment.IsDevelopment())
