@@ -100,7 +100,7 @@ const loadingFallback: AuthState = {
   user: null, token: null, loading: true,
   isAdmin: false, isDonor: false, isStaff: false,
   theme: 'light',
-  login: async () => {}, logout: () => {}, toggleTheme: () => {},
+  login: async () => {}, logout: () => {}, toggleTheme: () => {}, refreshUser: async () => {},
 };
 
 export function useAuth() {
