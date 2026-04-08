@@ -10,13 +10,17 @@
   ],
 
   // ─── Database ─────────────────────────────────────────────────────────────────
-  // Option A: SQL Server LocalDB (Windows, no password needed)
+  // Option A: SQL Server LocalDB (Windows only)
   //   "Server=(localdb)\\mssqllocaldb;Database=HarboredHopeOperational;Trusted_Connection=True;"
-  // Option B: Docker / remote SQL Server (fill in your SA password)
+  // Option B: Docker / on-prem SQL auth
   //   "Server=localhost;Database=HarboredHopeOperational;User Id=sa;Password=YOUR_SA_PASSWORD;TrustServerCertificate=True;"
+  // Option C: Azure SQL + Microsoft Entra (macOS/Linux/VS: use Active Directory Default, then `az login`)
+  //   Same catalog can be used for both OperationalDb and IdentityDb.
+  //   Portal "Integrated" auth is Windows-oriented; on Mac use Default + Entra user with DB access.
+  //   "Server=tcp:YOUR_SERVER.database.windows.net,1433;Initial Catalog=YOUR_DB;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;"
   "ConnectionStrings": {
-    "OperationalDb": "Server=(localdb)\\mssqllocaldb;Database=HarboredHopeOperational;Trusted_Connection=True;",
-    "IdentityDb":    "Server=(localdb)\\mssqllocaldb;Database=HarboredHopeIdentity;Trusted_Connection=True;"
+    "OperationalDb": "Server=tcp:YOUR_SERVER.database.windows.net,1433;Initial Catalog=YOUR_DB;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
+    "IdentityDb": "Server=tcp:YOUR_SERVER.database.windows.net,1433;Initial Catalog=YOUR_DB;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;"
   },
 
   // ─── JWT ──────────────────────────────────────────────────────────────────────

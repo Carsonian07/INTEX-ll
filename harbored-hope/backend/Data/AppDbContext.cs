@@ -26,6 +26,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         base.OnModelCreating(modelBuilder);
 
+        // The database uses snake_case column names; map every property automatically.
+        foreach (var entity in modelBuilder.Model.GetEntityTypes())
+        {
+            entity.SetTableName(ToSnakeCase(entity.GetTableName()!));
+            foreach (var prop in entity.GetProperties())
+                prop.SetColumnName(ToSnakeCase(prop.GetColumnName()));
+            foreach (var key in entity.GetKeys())
+                key.SetName(ToSnakeCase(key.GetName()!));
+            foreach (var fk in entity.GetForeignKeys())
+                fk.SetConstraintName(ToSnakeCase(fk.GetConstraintName()));
+            foreach (var idx in entity.GetIndexes())
+                idx.SetDatabaseName(ToSnakeCase(idx.GetDatabaseName()));
+        }
+
         modelBuilder.Entity<Safehouse>(e =>
         {
             e.HasIndex(s => s.SafehouseCode).IsUnique();
@@ -98,5 +112,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(a => a.SafehouseId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+    }
+
+    private static string ToSnakeCase(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return name;
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < name.Length; i++)
+        {
+            if (char.IsUpper(name[i]) && i > 0)
+                sb.Append('_');
+            sb.Append(char.ToLower(name[i]));
+        }
+        return sb.ToString();
     }
 }

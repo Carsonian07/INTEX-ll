@@ -34,6 +34,9 @@
 
     <!-- CSV parsing for Lighthouse data import -->
     <PackageReference Include="CsvHelper" Version="33.0.1" />
+
+    <!-- Required for Azure SQL Microsoft Entra auth (Active Directory Default / Interactive, etc.) -->
+    <PackageReference Include="Azure.Identity" Version="1.14.0" />
   </ItemGroup>
 
 </Project>

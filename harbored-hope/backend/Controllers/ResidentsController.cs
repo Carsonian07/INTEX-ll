@@ -96,7 +96,7 @@ public class ResidentsController(AppDbContext db) : ControllerBase
         // Sanitize free-text fields
         resident.SessionNarrative_Sanitize();
 
-        resident.CreatedAt = DateTime.UtcNow;
+        resident.CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
         db.Residents.Add(resident);
         await db.SaveChangesAsync();
 
@@ -219,8 +219,8 @@ public class ResidentsController(AppDbContext db) : ControllerBase
             return NotFound();
 
         plan.ResidentId = id;
-        plan.CreatedAt  = DateTime.UtcNow;
-        plan.UpdatedAt  = DateTime.UtcNow;
+        plan.CreatedAt  = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+        plan.UpdatedAt  = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
         db.InterventionPlans.Add(plan);
         await db.SaveChangesAsync();
 

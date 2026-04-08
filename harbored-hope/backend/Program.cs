@@ -9,11 +9,17 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 // ─── Database Contexts ────────────────────────────────────────────────────────
+var operationalCs = builder.Configuration.GetConnectionString("OperationalDb")
+    ?? throw new InvalidOperationException("Connection string 'OperationalDb' is not configured.");
+var identityCs = builder.Configuration.GetConnectionString("IdentityDb")
+    ?? throw new InvalidOperationException("Connection string 'IdentityDb' is not configured.");
+
+// Separate migration history tables so both contexts can share one Azure SQL database.
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("OperationalDb")));
+    options.UseSqlServer(operationalCs, sql => sql.MigrationsHistoryTable("__EFMigrationsHistory_Operational")));
 
 builder.Services.AddDbContext<AuthDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("IdentityDb")));
+    options.UseSqlServer(identityCs, sql => sql.MigrationsHistoryTable("__EFMigrationsHistory_Auth")));
 
 // ─── ASP.NET Identity ─────────────────────────────────────────────────────────
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>

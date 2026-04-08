@@ -120,7 +120,6 @@ public class DonationsController(AppDbContext db) : ControllerBase
             IsRecurring   = req.IsRecurring,
             CampaignName  = req.CampaignName,
             Notes         = req.Notes,
-            CreatedAt     = DateTime.UtcNow
         };
 
         db.Donations.Add(donation);
@@ -148,7 +147,6 @@ public class DonationsController(AppDbContext db) : ControllerBase
         if (existing is null) return NotFound();
 
         updated.DonationId = id;
-        updated.CreatedAt  = existing.CreatedAt;
         db.Entry(existing).CurrentValues.SetValues(updated);
         await db.SaveChangesAsync();
 
@@ -225,7 +223,7 @@ public class SupportersController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> Create([FromBody] Supporter supporter)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
-        supporter.CreatedAt = DateTime.UtcNow;
+        supporter.CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
         db.Supporters.Add(supporter);
         await db.SaveChangesAsync();
         return CreatedAtAction(nameof(GetById), new { id = supporter.SupporterId }, supporter);

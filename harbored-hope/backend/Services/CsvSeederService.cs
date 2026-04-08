@@ -188,8 +188,7 @@ public class CsvSeederService(AppDbContext db, ILogger<CsvSeederService> logger)
                 ImpactUnit        = r.impact_unit,
                 IsRecurring       = ParseBool(r.is_recurring),
                 CampaignName      = r.campaign_name,
-                Notes             = r.notes,
-                CreatedAt         = DateTime.UtcNow
+                Notes             = r.notes
             });
             count++;
         }
@@ -451,14 +450,12 @@ public class CsvSeederService(AppDbContext db, ILogger<CsvSeederService> logger)
             {
                 ResidentId        = rid,
                 RecordDate        = ParseDate(r.record_date),
-                ProgramName       = r.program_name ?? "",
-                CourseName        = r.course_name ?? "",
                 EducationLevel    = r.education_level ?? "",
-                AttendanceStatus  = r.attendance_status ?? "",
+                SchoolName        = r.school_name,
+                EnrollmentStatus  = r.enrollment_status ?? "",
                 AttendanceRate    = ParseDecimal(r.attendance_rate),
                 ProgressPercent   = ParseDecimal(r.progress_percent),
                 CompletionStatus  = r.completion_status ?? "",
-                GpaLikeScore      = ParseDecimal(r.gpa_like_score),
                 Notes             = r.notes
             });
             count++;
@@ -720,8 +717,8 @@ public class CsvSeederService(AppDbContext db, ILogger<CsvSeederService> logger)
     private static DateOnly? ParseDateNullable(string? s)
         => string.IsNullOrWhiteSpace(s) ? null : DateOnly.TryParse(s, out var d) ? d : null;
 
-    private static DateTime ParseDateTime(string? s)
-        => DateTime.TryParse(s, out var d) ? d : DateTime.UtcNow;
+    private static string? ParseDateTime(string? s)
+        => string.IsNullOrWhiteSpace(s) ? DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss") : s;
 
     private static int ParseInt(string? s)
         => int.TryParse(s, out var i) ? i : 0;
@@ -759,7 +756,7 @@ public class AllocationCsvRow       { public string? donation_id { get; set; } p
 public class ResidentCsvRow         { public string? case_control_no { get; set; } public string? internal_code { get; set; } public string? safehouse_id { get; set; } public string? case_status { get; set; } public string? sex { get; set; } public string? date_of_birth { get; set; } public string? birth_status { get; set; } public string? place_of_birth { get; set; } public string? religion { get; set; } public string? case_category { get; set; } public string? sub_cat_orphaned { get; set; } public string? sub_cat_trafficked { get; set; } public string? sub_cat_child_labor { get; set; } public string? sub_cat_physical_abuse { get; set; } public string? sub_cat_sexual_abuse { get; set; } public string? sub_cat_osaec { get; set; } public string? sub_cat_cicl { get; set; } public string? sub_cat_at_risk { get; set; } public string? sub_cat_street_child { get; set; } public string? sub_cat_child_with_hiv { get; set; } public string? is_pwd { get; set; } public string? pwd_type { get; set; } public string? has_special_needs { get; set; } public string? special_needs_diagnosis { get; set; } public string? family_is_4ps { get; set; } public string? family_solo_parent { get; set; } public string? family_indigenous { get; set; } public string? family_parent_pwd { get; set; } public string? family_informal_settler { get; set; } public string? date_of_admission { get; set; } public string? age_upon_admission { get; set; } public string? referral_source { get; set; } public string? referring_agency_person { get; set; } public string? assigned_social_worker { get; set; } public string? initial_case_assessment { get; set; } public string? date_case_study_prepared { get; set; } public string? reintegration_type { get; set; } public string? reintegration_status { get; set; } public string? initial_risk_level { get; set; } public string? current_risk_level { get; set; } public string? date_closed { get; set; } public string? created_at { get; set; } }
 public class ProcessRecordingCsvRow { public string? resident_id { get; set; } public string? session_date { get; set; } public string? social_worker { get; set; } public string? session_type { get; set; } public string? session_duration_minutes { get; set; } public string? emotional_state_observed { get; set; } public string? emotional_state_end { get; set; } public string? session_narrative { get; set; } public string? interventions_applied { get; set; } public string? follow_up_actions { get; set; } public string? progress_noted { get; set; } public string? concerns_flagged { get; set; } public string? referral_made { get; set; } }
 public class HomeVisitationCsvRow   { public string? resident_id { get; set; } public string? visit_date { get; set; } public string? social_worker { get; set; } public string? visit_type { get; set; } public string? location_visited { get; set; } public string? family_members_present { get; set; } public string? purpose { get; set; } public string? observations { get; set; } public string? family_cooperation_level { get; set; } public string? safety_concerns_noted { get; set; } public string? follow_up_needed { get; set; } public string? follow_up_notes { get; set; } public string? visit_outcome { get; set; } }
-public class EducationRecordCsvRow  { public string? resident_id { get; set; } public string? record_date { get; set; } public string? program_name { get; set; } public string? course_name { get; set; } public string? education_level { get; set; } public string? attendance_status { get; set; } public string? attendance_rate { get; set; } public string? progress_percent { get; set; } public string? completion_status { get; set; } public string? gpa_like_score { get; set; } public string? notes { get; set; } }
+public class EducationRecordCsvRow  { public string? resident_id { get; set; } public string? record_date { get; set; } public string? education_level { get; set; } public string? school_name { get; set; } public string? enrollment_status { get; set; } public string? attendance_rate { get; set; } public string? progress_percent { get; set; } public string? completion_status { get; set; } public string? notes { get; set; } }
 public class HealthRecordCsvRow     { public string? resident_id { get; set; } public string? record_date { get; set; } public string? weight_kg { get; set; } public string? height_cm { get; set; } public string? bmi { get; set; } public string? nutrition_score { get; set; } public string? sleep_score { get; set; } public string? energy_score { get; set; } public string? general_health_score { get; set; } public string? medical_checkup_done { get; set; } public string? dental_checkup_done { get; set; } public string? psychological_checkup_done { get; set; } }
 public class InterventionPlanCsvRow { public string? resident_id { get; set; } public string? plan_category { get; set; } public string? plan_description { get; set; } public string? services_provided { get; set; } public string? target_value { get; set; } public string? target_date { get; set; } public string? status { get; set; } public string? case_conference_date { get; set; } public string? created_at { get; set; } public string? updated_at { get; set; } }
 public class IncidentReportCsvRow   { public string? resident_id { get; set; } public string? safehouse_id { get; set; } public string? incident_date { get; set; } public string? incident_type { get; set; } public string? severity { get; set; } public string? description { get; set; } public string? response_taken { get; set; } public string? resolved { get; set; } public string? resolution_date { get; set; } public string? reported_by { get; set; } public string? follow_up_required { get; set; } }

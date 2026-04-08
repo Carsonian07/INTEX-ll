@@ -208,7 +208,7 @@ export interface SafehouseOverviewItem {
 
 export interface Reports {
   donationTrends: { year: number; month: number; total: number; count: number }[];
-  educationTrends: { year: number; month: number; avgProgress: number; avgGpa: number }[];
+  educationTrends: { year: number; month: number; avgProgress: number }[];
   healthTrends: { year: number; month: number; avgHealth: number; avgNutrition: number }[];
   reintegrationOutcomes: unknown[];
   safehousePerformance: unknown[];

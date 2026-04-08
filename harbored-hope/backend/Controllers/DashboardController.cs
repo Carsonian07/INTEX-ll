@@ -30,12 +30,12 @@ public class DashboardController(AppDbContext db) : ControllerBase
             .Take(7)
             .ToListAsync();
 
-        var avgEducation = latestMetrics.Any()
-            ? Math.Round(latestMetrics.Average(m => (double)m.AvgEducationProgress), 1)
+        var avgEducation = latestMetrics.Any(m => m.AvgEducationProgress.HasValue)
+            ? Math.Round(latestMetrics.Where(m => m.AvgEducationProgress.HasValue).Average(m => (double)m.AvgEducationProgress!.Value), 1)
             : 0;
 
-        var avgHealth = latestMetrics.Any()
-            ? Math.Round(latestMetrics.Average(m => (double)m.AvgHealthScore), 2)
+        var avgHealth = latestMetrics.Any(m => m.AvgHealthScore.HasValue)
+            ? Math.Round(latestMetrics.Where(m => m.AvgHealthScore.HasValue).Average(m => (double)m.AvgHealthScore!.Value), 2)
             : 0;
 
         var totalMonetary = await db.Donations
@@ -164,22 +164,23 @@ public class DashboardController(AppDbContext db) : ControllerBase
             {
                 year  = g.Key.Year,
                 month = g.Key.Month,
-                avgProgress = Math.Round(g.Average(e => (double)e.ProgressPercent), 1),
-                avgGpa      = Math.Round(g.Average(e => (double)e.GpaLikeScore), 2)
+                avgProgress = Math.Round(g.Average(e => (double)e.ProgressPercent), 1)
             })
             .OrderBy(x => x.year).ThenBy(x => x.month)
             .ToListAsync();
 
         // Health trends
         var healthTrends = await db.HealthWellbeingRecords
-            .Where(h => h.RecordDate >= cutoff)
+            .Where(h => h.RecordDate >= cutoff
+                     && h.GeneralHealthScore != null
+                     && h.NutritionScore != null)
             .GroupBy(h => new { h.RecordDate.Year, h.RecordDate.Month })
             .Select(g => new
             {
-                year  = g.Key.Year,
-                month = g.Key.Month,
-                avgHealth    = Math.Round(g.Average(h => (double)h.GeneralHealthScore), 2),
-                avgNutrition = Math.Round(g.Average(h => (double)h.NutritionScore), 2)
+                year         = g.Key.Year,
+                month        = g.Key.Month,
+                avgHealth    = Math.Round(g.Average(h => (double)h.GeneralHealthScore!.Value), 2),
+                avgNutrition = Math.Round(g.Average(h => (double)h.NutritionScore!.Value), 2)
             })
             .OrderBy(x => x.year).ThenBy(x => x.month)
             .ToListAsync();
@@ -198,8 +199,8 @@ public class DashboardController(AppDbContext db) : ControllerBase
             .Select(g => new
             {
                 safehouseId       = g.Key,
-                avgEducation      = Math.Round(g.Average(m => (double)m.AvgEducationProgress), 1),
-                avgHealth         = Math.Round(g.Average(m => (double)m.AvgHealthScore), 2),
+                avgEducation      = Math.Round(g.Average(m => (double)(m.AvgEducationProgress ?? 0m)), 1),
+                avgHealth         = Math.Round(g.Average(m => (double)(m.AvgHealthScore ?? 0m)), 2),
                 totalIncidents    = g.Sum(m => m.IncidentCount),
                 avgActiveResidents = Math.Round(g.Average(m => (double)m.ActiveResidents), 1)
             })

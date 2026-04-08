@@ -58,7 +58,7 @@ public class Supporter
     [MaxLength(20)] public string Status { get; set; } = "Active";
     public DateOnly? FirstDonationDate { get; set; }
     [MaxLength(50)] public string? AcquisitionChannel { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? CreatedAt { get; set; }
 
     public ICollection<Donation> Donations { get; set; } = [];
 }
@@ -80,7 +80,6 @@ public class Donation
     public string? Notes { get; set; }
     public int? CreatedByPartnerId { get; set; }
     public int? ReferralPostId { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     [ForeignKey("SupporterId")] public Supporter Supporter { get; set; } = null!;
     public ICollection<DonationAllocation> Allocations { get; set; } = [];
@@ -173,7 +172,7 @@ public class Resident
     [MaxLength(20)] public string InitialRiskLevel { get; set; } = "Medium";
     [MaxLength(20)] public string CurrentRiskLevel { get; set; } = "Medium";
     public DateOnly? DateClosed { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? CreatedAt { get; set; }
 
     [ForeignKey("SafehouseId")] public Safehouse Safehouse { get; set; } = null!;
     public ICollection<ProcessRecording> ProcessRecordings { get; set; } = [];
@@ -232,14 +231,12 @@ public class EducationRecord
     [Key] public int EducationRecordId { get; set; }
     public int ResidentId { get; set; }
     public DateOnly RecordDate { get; set; }
-    [MaxLength(50)] public string ProgramName { get; set; } = "";
-    [MaxLength(50)] public string CourseName { get; set; } = "";
     [MaxLength(30)] public string EducationLevel { get; set; } = "";
-    [MaxLength(20)] public string AttendanceStatus { get; set; } = "";
-    [Column(TypeName = "decimal(5,4)")] public decimal AttendanceRate { get; set; }
-    [Column(TypeName = "decimal(5,2)")] public decimal ProgressPercent { get; set; }
+    [MaxLength(100)] public string? SchoolName { get; set; }
+    [MaxLength(20)] public string EnrollmentStatus { get; set; } = "";
+    [Column(TypeName = "decimal(5,3)")] public decimal AttendanceRate { get; set; }
+    [Column(TypeName = "decimal(5,1)")] public decimal ProgressPercent { get; set; }
     [MaxLength(20)] public string CompletionStatus { get; set; } = "";
-    [Column(TypeName = "decimal(3,2)")] public decimal GpaLikeScore { get; set; }
     public string? Notes { get; set; }
 
     [ForeignKey("ResidentId")] public Resident Resident { get; set; } = null!;
@@ -254,10 +251,10 @@ public class HealthWellbeingRecord
     [Column(TypeName = "decimal(5,2)")] public decimal WeightKg { get; set; }
     [Column(TypeName = "decimal(5,2)")] public decimal HeightCm { get; set; }
     [Column(TypeName = "decimal(4,2)")] public decimal Bmi { get; set; }
-    [Column(TypeName = "decimal(3,2)")] public decimal NutritionScore { get; set; }
-    [Column(TypeName = "decimal(3,2)")] public decimal SleepScore { get; set; }
-    [Column(TypeName = "decimal(3,2)")] public decimal EnergyScore { get; set; }
-    [Column(TypeName = "decimal(3,2)")] public decimal GeneralHealthScore { get; set; }
+    [Column("nutrition_score", TypeName = "decimal(3,2)")] public decimal? NutritionScore { get; set; }
+    [Column("sleep_quality_score", TypeName = "decimal(3,2)")] public decimal? SleepScore { get; set; }
+    [Column("energy_level_score", TypeName = "decimal(3,2)")] public decimal? EnergyScore { get; set; }
+    [Column("general_health_score", TypeName = "decimal(3,2)")] public decimal? GeneralHealthScore { get; set; }
     public bool MedicalCheckupDone { get; set; }
     public bool DentalCheckupDone { get; set; }
     public bool PsychologicalCheckupDone { get; set; }
@@ -277,8 +274,8 @@ public class InterventionPlan
     public DateOnly TargetDate { get; set; }
     [MaxLength(20)] public string Status { get; set; } = "Open";
     public DateOnly? CaseConferenceDate { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public string? CreatedAt { get; set; }
+    public string? UpdatedAt { get; set; }
 
     [ForeignKey("ResidentId")] public Resident Resident { get; set; } = null!;
 }
@@ -310,7 +307,7 @@ public class SocialMediaPost
     [MaxLength(20)] public string Platform { get; set; } = "";
     [MaxLength(100)] public string? PlatformPostId { get; set; }
     [MaxLength(500)] public string? PostUrl { get; set; }
-    public DateTime CreatedAt { get; set; }
+    public string? CreatedAt { get; set; }
     [MaxLength(15)] public string? DayOfWeek { get; set; }
     public int PostHour { get; set; }
     [MaxLength(30)] public string PostType { get; set; } = "";
@@ -351,8 +348,8 @@ public class SafehouseMonthlyMetric
     public DateOnly MonthStart { get; set; }
     public DateOnly MonthEnd { get; set; }
     public int ActiveResidents { get; set; }
-    [Column(TypeName = "decimal(5,2)")] public decimal AvgEducationProgress { get; set; }
-    [Column(TypeName = "decimal(3,2)")] public decimal AvgHealthScore { get; set; }
+    [Column(TypeName = "decimal(5,2)")] public decimal? AvgEducationProgress { get; set; }
+    [Column(TypeName = "decimal(3,2)")] public decimal? AvgHealthScore { get; set; }
     public int ProcessRecordingCount { get; set; }
     public int HomeVisitationCount { get; set; }
     public int IncidentCount { get; set; }
