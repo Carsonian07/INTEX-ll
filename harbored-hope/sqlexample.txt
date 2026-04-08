@@ -1,0 +1,368 @@
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET NOCOUNT ON;
+GO
+
+IF OBJECT_ID(N'dbo.app_users', N'U') IS NOT NULL DROP TABLE dbo.app_users;
+IF OBJECT_ID(N'dbo.donation_allocations', N'U') IS NOT NULL DROP TABLE dbo.donation_allocations;
+IF OBJECT_ID(N'dbo.in_kind_donation_items', N'U') IS NOT NULL DROP TABLE dbo.in_kind_donation_items;
+IF OBJECT_ID(N'dbo.donations', N'U') IS NOT NULL DROP TABLE dbo.donations;
+IF OBJECT_ID(N'dbo.partner_assignments', N'U') IS NOT NULL DROP TABLE dbo.partner_assignments;
+IF OBJECT_ID(N'dbo.education_records', N'U') IS NOT NULL DROP TABLE dbo.education_records;
+IF OBJECT_ID(N'dbo.health_wellbeing_records', N'U') IS NOT NULL DROP TABLE dbo.health_wellbeing_records;
+IF OBJECT_ID(N'dbo.incident_reports', N'U') IS NOT NULL DROP TABLE dbo.incident_reports;
+IF OBJECT_ID(N'dbo.intervention_plans', N'U') IS NOT NULL DROP TABLE dbo.intervention_plans;
+IF OBJECT_ID(N'dbo.process_recordings', N'U') IS NOT NULL DROP TABLE dbo.process_recordings;
+IF OBJECT_ID(N'dbo.home_visitations', N'U') IS NOT NULL DROP TABLE dbo.home_visitations;
+IF OBJECT_ID(N'dbo.safehouse_monthly_metrics', N'U') IS NOT NULL DROP TABLE dbo.safehouse_monthly_metrics;
+IF OBJECT_ID(N'dbo.residents', N'U') IS NOT NULL DROP TABLE dbo.residents;
+IF OBJECT_ID(N'dbo.public_impact_snapshots', N'U') IS NOT NULL DROP TABLE dbo.public_impact_snapshots;
+IF OBJECT_ID(N'dbo.social_media_posts', N'U') IS NOT NULL DROP TABLE dbo.social_media_posts;
+IF OBJECT_ID(N'dbo.supporters', N'U') IS NOT NULL DROP TABLE dbo.supporters;
+IF OBJECT_ID(N'dbo.partners', N'U') IS NOT NULL DROP TABLE dbo.partners;
+IF OBJECT_ID(N'dbo.safehouses', N'U') IS NOT NULL DROP TABLE dbo.safehouses;
+GO
+
+CREATE TABLE dbo.supporters(
+   supporter_id        INTEGER  NOT NULL PRIMARY KEY 
+  ,supporter_type      VARCHAR(19) NOT NULL
+  ,display_name        VARCHAR(17) NOT NULL
+  ,organization_name   VARCHAR(17)
+  ,first_name          VARCHAR(6)
+  ,last_name           VARCHAR(10)
+  ,relationship_type   VARCHAR(19) NOT NULL
+  ,region              VARCHAR(8) NOT NULL
+  ,country             VARCHAR(11) NOT NULL
+  ,email               VARCHAR(37) NOT NULL
+  ,phone               VARCHAR(17) NOT NULL
+  ,status              VARCHAR(8) NOT NULL
+  ,created_at          VARCHAR(19) NOT NULL
+  ,first_donation_date DATE 
+  ,acquisition_channel VARCHAR(15) NOT NULL
+);
+
+CREATE TABLE dbo.partners(
+   partner_id   INTEGER  NOT NULL PRIMARY KEY 
+  ,partner_name VARCHAR(14) NOT NULL
+  ,partner_type VARCHAR(12) NOT NULL
+  ,role_type    VARCHAR(13) NOT NULL
+  ,contact_name VARCHAR(14) NOT NULL
+  ,email        VARCHAR(34) NOT NULL
+  ,phone        VARCHAR(16) NOT NULL
+  ,region       VARCHAR(8) NOT NULL
+  ,status       VARCHAR(8) NOT NULL
+  ,start_date   DATE  NOT NULL
+  ,end_date     DATE 
+  ,notes        VARCHAR(20) NOT NULL
+);
+
+CREATE TABLE dbo.safehouses(
+   safehouse_id      INTEGER  NOT NULL PRIMARY KEY 
+  ,safehouse_code    VARCHAR(4) NOT NULL
+  ,name              NVARCHAR(100)  NOT NULL
+  ,region            VARCHAR(8) NOT NULL
+  ,city              VARCHAR(14) NOT NULL
+  ,province          VARCHAR(17) NOT NULL
+  ,country           VARCHAR(11) NOT NULL
+  ,open_date         DATE  NOT NULL
+  ,status            VARCHAR(6) NOT NULL
+  ,capacity_girls    INTEGER  NOT NULL
+  ,capacity_staff    INTEGER  NOT NULL
+  ,current_occupancy INTEGER  NOT NULL
+  ,notes             VARCHAR(30)
+);
+
+CREATE TABLE dbo.social_media_posts(
+   post_id                      INTEGER  NOT NULL PRIMARY KEY 
+  ,platform                     VARCHAR(9) NOT NULL
+  ,platform_post_id             VARCHAR(19) NOT NULL
+  ,post_url                     VARCHAR(68) NOT NULL
+  ,created_at                   VARCHAR(19) NOT NULL
+  ,day_of_week                  VARCHAR(9) NOT NULL
+  ,post_hour                    INTEGER  NOT NULL
+  ,post_type                    VARCHAR(18) NOT NULL
+  ,media_type                   VARCHAR(8) NOT NULL
+  ,caption                      VARCHAR(220) NOT NULL
+  ,hashtags                     VARCHAR(84)
+  ,num_hashtags                 INTEGER  NOT NULL
+  ,mentions_count               INTEGER  NOT NULL
+  ,has_call_to_action           VARCHAR(5) NOT NULL
+  ,call_to_action_type          VARCHAR(10)
+  ,content_topic                VARCHAR(16) NOT NULL
+  ,sentiment_tone               VARCHAR(11) NOT NULL
+  ,caption_length               INTEGER  NOT NULL
+  ,features_resident_story      VARCHAR(5) NOT NULL
+  ,campaign_name                VARCHAR(16)
+  ,is_boosted                   VARCHAR(5) NOT NULL
+  ,boost_budget_php             NUMERIC(7,2)
+  ,impressions                  INTEGER  NOT NULL
+  ,reach                        INTEGER  NOT NULL
+  ,likes                        INTEGER  NOT NULL
+  ,comments                     INTEGER  NOT NULL
+  ,shares                       INTEGER  NOT NULL
+  ,saves                        INTEGER  NOT NULL
+  ,click_throughs               INTEGER  NOT NULL
+  ,video_views                  NUMERIC(7,1)
+  ,engagement_rate              NUMERIC(6,4) NOT NULL
+  ,profile_visits               INTEGER  NOT NULL
+  ,donation_referrals           INTEGER  NOT NULL
+  ,estimated_donation_value_php NUMERIC(10,2) NOT NULL
+  ,follower_count_at_post       INTEGER  NOT NULL
+  ,watch_time_seconds           NUMERIC(10,1)
+  ,avg_view_duration_seconds    NUMERIC(5,1)
+  ,subscriber_count_at_post     NUMERIC(5,1)
+  ,forwards                     NUMERIC(6,1)
+);
+
+CREATE TABLE dbo.residents(
+   resident_id              INTEGER  NOT NULL PRIMARY KEY 
+  ,case_control_no          VARCHAR(5) NOT NULL
+  ,internal_code            VARCHAR(7) NOT NULL
+  ,safehouse_id             INTEGER  NOT NULL
+  ,case_status              VARCHAR(11) NOT NULL
+  ,sex                      VARCHAR(1) NOT NULL
+  ,date_of_birth            DATE  NOT NULL
+  ,birth_status             VARCHAR(11) NOT NULL
+  ,place_of_birth           VARCHAR(14) NOT NULL
+  ,religion                 VARCHAR(21) NOT NULL
+  ,case_category            VARCHAR(11) NOT NULL
+  ,sub_cat_orphaned         VARCHAR(5) NOT NULL
+  ,sub_cat_trafficked       VARCHAR(5) NOT NULL
+  ,sub_cat_child_labor      VARCHAR(5) NOT NULL
+  ,sub_cat_physical_abuse   VARCHAR(5) NOT NULL
+  ,sub_cat_sexual_abuse     VARCHAR(5) NOT NULL
+  ,sub_cat_osaec            VARCHAR(5) NOT NULL
+  ,sub_cat_cicl             VARCHAR(5) NOT NULL
+  ,sub_cat_at_risk          VARCHAR(5) NOT NULL
+  ,sub_cat_street_child     VARCHAR(5) NOT NULL
+  ,sub_cat_child_with_hiv   VARCHAR(5) NOT NULL
+  ,is_pwd                   VARCHAR(5) NOT NULL
+  ,pwd_type                 VARCHAR(12)
+  ,has_special_needs        VARCHAR(5) NOT NULL
+  ,special_needs_diagnosis  VARCHAR(19)
+  ,family_is_4ps            VARCHAR(5) NOT NULL
+  ,family_solo_parent       VARCHAR(5) NOT NULL
+  ,family_indigenous        VARCHAR(5) NOT NULL
+  ,family_parent_pwd        VARCHAR(5) NOT NULL
+  ,family_informal_settler  VARCHAR(5) NOT NULL
+  ,date_of_admission        DATE  NOT NULL
+  ,age_upon_admission       VARCHAR(18) NOT NULL
+  ,present_age              VARCHAR(18) NOT NULL
+  ,length_of_stay           VARCHAR(17) NOT NULL
+  ,referral_source          VARCHAR(17) NOT NULL
+  ,referring_agency_person  VARCHAR(12)
+  ,date_colb_registered     DATE 
+  ,date_colb_obtained       DATE 
+  ,assigned_social_worker   VARCHAR(5) NOT NULL
+  ,initial_case_assessment  VARCHAR(22) NOT NULL
+  ,date_case_study_prepared DATE 
+  ,reintegration_type       VARCHAR(24) NOT NULL
+  ,reintegration_status     VARCHAR(11) NOT NULL
+  ,initial_risk_level       VARCHAR(8) NOT NULL
+  ,current_risk_level       VARCHAR(8) NOT NULL
+  ,date_enrolled            DATE  NOT NULL
+  ,date_closed              DATE 
+  ,created_at               VARCHAR(19) NOT NULL
+  ,notes_restricted         VARCHAR(30)
+);
+
+CREATE TABLE dbo.donations(
+   donation_id      INTEGER  NOT NULL PRIMARY KEY 
+  ,supporter_id     INTEGER  NOT NULL
+  ,donation_type    VARCHAR(11) NOT NULL
+  ,donation_date    DATE  NOT NULL
+  ,is_recurring     VARCHAR(5) NOT NULL
+  ,campaign_name    VARCHAR(16)
+  ,channel_source   VARCHAR(15) NOT NULL
+  ,currency_code    VARCHAR(3)
+  ,amount           NUMERIC(7,2)
+  ,estimated_value  NUMERIC(7,2) NOT NULL
+  ,impact_unit      VARCHAR(9) NOT NULL
+  ,notes            VARCHAR(34) NOT NULL
+  ,referral_post_id INTEGER 
+);
+
+CREATE TABLE dbo.donation_allocations(
+   allocation_id    INTEGER  NOT NULL PRIMARY KEY 
+  ,donation_id      INTEGER  NOT NULL
+  ,safehouse_id     INTEGER  NOT NULL
+  ,program_area     VARCHAR(11) NOT NULL
+  ,amount_allocated NUMERIC(7,2) NOT NULL
+  ,allocation_date  DATE  NOT NULL
+  ,allocation_notes VARCHAR(30)
+);
+
+CREATE TABLE dbo.in_kind_donation_items(
+   item_id              INTEGER  NOT NULL PRIMARY KEY 
+  ,donation_id          INTEGER  NOT NULL
+  ,item_name            VARCHAR(15) NOT NULL
+  ,item_category        VARCHAR(15) NOT NULL
+  ,quantity             INTEGER  NOT NULL
+  ,unit_of_measure      VARCHAR(5) NOT NULL
+  ,estimated_unit_value NUMERIC(7,2) NOT NULL
+  ,intended_use         VARCHAR(9) NOT NULL
+  ,received_condition   VARCHAR(4) NOT NULL
+);
+
+CREATE TABLE dbo.partner_assignments(
+   assignment_id        INTEGER  NOT NULL PRIMARY KEY 
+  ,partner_id           INTEGER  NOT NULL
+  ,safehouse_id         INT
+  ,program_area         VARCHAR(11) NOT NULL
+  ,assignment_start     DATE  NOT NULL
+  ,assignment_end       DATE 
+  ,responsibility_notes VARCHAR(46) NOT NULL
+  ,is_primary           VARCHAR(5) NOT NULL
+  ,status               VARCHAR(6) NOT NULL
+);
+
+CREATE TABLE dbo.education_records(
+   education_record_id INTEGER  NOT NULL PRIMARY KEY 
+  ,resident_id         INTEGER  NOT NULL
+  ,record_date         DATE  NOT NULL
+  ,education_level     VARCHAR(11) NOT NULL
+  ,school_name         VARCHAR(9) NOT NULL
+  ,enrollment_status   VARCHAR(8) NOT NULL
+  ,attendance_rate     NUMERIC(5,3) NOT NULL
+  ,progress_percent    NUMERIC(5,1) NOT NULL
+  ,completion_status   VARCHAR(10) NOT NULL
+  ,notes               VARCHAR(20) NOT NULL
+);
+
+CREATE TABLE dbo.health_wellbeing_records(
+   health_record_id           INTEGER  NOT NULL PRIMARY KEY 
+  ,resident_id                INTEGER  NOT NULL
+  ,record_date                DATE  NOT NULL
+  ,general_health_score       NUMERIC(4,2) NOT NULL
+  ,nutrition_score            NUMERIC(4,2) NOT NULL
+  ,sleep_quality_score        NUMERIC(4,2) NOT NULL
+  ,energy_level_score         NUMERIC(4,2) NOT NULL
+  ,height_cm                  NUMERIC(5,1) NOT NULL
+  ,weight_kg                  NUMERIC(4,1) NOT NULL
+  ,bmi                        NUMERIC(4,1) NOT NULL
+  ,medical_checkup_done       VARCHAR(5) NOT NULL
+  ,dental_checkup_done        VARCHAR(5) NOT NULL
+  ,psychological_checkup_done VARCHAR(5) NOT NULL
+  ,notes                      VARCHAR(24) NOT NULL
+);
+
+CREATE TABLE dbo.incident_reports(
+   incident_id        INTEGER  NOT NULL PRIMARY KEY 
+  ,resident_id        INTEGER  NOT NULL
+  ,safehouse_id       INTEGER  NOT NULL
+  ,incident_date      DATE  NOT NULL
+  ,incident_type      VARCHAR(16) NOT NULL
+  ,severity           VARCHAR(6) NOT NULL
+  ,description        VARCHAR(48) NOT NULL
+  ,response_taken     VARCHAR(28) NOT NULL
+  ,resolved           VARCHAR(5) NOT NULL
+  ,resolution_date    DATE 
+  ,reported_by        VARCHAR(5) NOT NULL
+  ,follow_up_required VARCHAR(5) NOT NULL
+);
+
+CREATE TABLE dbo.intervention_plans(
+   plan_id              INTEGER  NOT NULL PRIMARY KEY 
+  ,resident_id          INTEGER  NOT NULL
+  ,plan_category        VARCHAR(15) NOT NULL
+  ,plan_description     VARCHAR(43) NOT NULL
+  ,services_provided    VARCHAR(33) NOT NULL
+  ,target_value         NUMERIC(4,2) NOT NULL
+  ,target_date          DATE  NOT NULL
+  ,status               VARCHAR(11) NOT NULL
+  ,case_conference_date DATE 
+  ,created_at           VARCHAR(19) NOT NULL
+  ,updated_at           VARCHAR(19) NOT NULL
+);
+
+CREATE TABLE dbo.process_recordings(
+   recording_id             INTEGER  NOT NULL PRIMARY KEY 
+  ,resident_id              INTEGER  NOT NULL
+  ,session_date             DATE  NOT NULL
+  ,social_worker            VARCHAR(5) NOT NULL
+  ,session_type             VARCHAR(10) NOT NULL
+  ,session_duration_minutes INTEGER  NOT NULL
+  ,emotional_state_observed VARCHAR(10) NOT NULL
+  ,emotional_state_end      VARCHAR(9) NOT NULL
+  ,session_narrative        VARCHAR(62) NOT NULL
+  ,interventions_applied    VARCHAR(33) NOT NULL
+  ,follow_up_actions        VARCHAR(26) NOT NULL
+  ,progress_noted           VARCHAR(5) NOT NULL
+  ,concerns_flagged         VARCHAR(5) NOT NULL
+  ,referral_made            VARCHAR(5) NOT NULL
+  ,notes_restricted         VARCHAR(30)
+);
+
+CREATE TABLE dbo.home_visitations(
+   visitation_id            INTEGER  NOT NULL PRIMARY KEY 
+  ,resident_id              INTEGER  NOT NULL
+  ,visit_date               DATE  NOT NULL
+  ,social_worker            VARCHAR(5) NOT NULL
+  ,visit_type               VARCHAR(25) NOT NULL
+  ,location_visited         VARCHAR(20) NOT NULL
+  ,family_members_present   VARCHAR(35) NOT NULL
+  ,purpose                  VARCHAR(40) NOT NULL
+  ,observations             VARCHAR(61) NOT NULL
+  ,family_cooperation_level VARCHAR(18) NOT NULL
+  ,safety_concerns_noted    VARCHAR(5) NOT NULL
+  ,follow_up_needed         VARCHAR(5) NOT NULL
+  ,follow_up_notes          VARCHAR(19)
+  ,visit_outcome            VARCHAR(17) NOT NULL
+);
+
+CREATE TABLE dbo.public_impact_snapshots(
+   snapshot_id         INTEGER  NOT NULL PRIMARY KEY 
+  ,snapshot_date       DATE  NOT NULL
+  ,headline            VARCHAR(51) NOT NULL
+  ,summary_text        VARCHAR(111) NOT NULL
+  ,metric_payload_json VARCHAR(141) NOT NULL
+  ,is_published        VARCHAR(4) NOT NULL
+  ,published_at        DATE  NOT NULL
+);
+
+CREATE TABLE dbo.safehouse_monthly_metrics(
+   metric_id               INTEGER  NOT NULL PRIMARY KEY 
+  ,safehouse_id            INTEGER  NOT NULL
+  ,month_start             DATE  NOT NULL
+  ,month_end               DATE  NOT NULL
+  ,active_residents        INTEGER  NOT NULL
+  ,avg_education_progress  NUMERIC(5,2)
+  ,avg_health_score        NUMERIC(4,2)
+  ,process_recording_count INTEGER  NOT NULL
+  ,home_visitation_count   INTEGER  NOT NULL
+  ,incident_count          INTEGER  NOT NULL
+  ,notes                   VARCHAR(30)
+);
+
+CREATE TABLE dbo.app_users
+(
+    user_id            INT IDENTITY(1, 1) NOT NULL,
+    first_name         NVARCHAR(100) NOT NULL,
+    last_name          NVARCHAR(100) NOT NULL,
+    email              NVARCHAR(255) NOT NULL,
+    password_hash      NVARCHAR(450) NOT NULL,
+    role               VARCHAR(20) NOT NULL,
+    supporter_id       INT NULL,
+    email_confirmed    BIT NOT NULL
+        CONSTRAINT DF_app_users_email_confirmed DEFAULT (0),
+    created_at         DATETIME2(7) NOT NULL
+        CONSTRAINT DF_app_users_created_at DEFAULT (SYSUTCDATETIME()),
+    updated_at         DATETIME2(7) NOT NULL
+        CONSTRAINT DF_app_users_updated_at DEFAULT (SYSUTCDATETIME()),
+    last_login_at      DATETIME2(7) NULL,
+    is_active          BIT NOT NULL
+        CONSTRAINT DF_app_users_is_active DEFAULT (1),
+    row_version        ROWVERSION NOT NULL,
+    CONSTRAINT PK_app_users PRIMARY KEY CLUSTERED (user_id),
+    CONSTRAINT UQ_app_users_email UNIQUE (email),
+    CONSTRAINT CK_app_users_role CHECK (role IN (N'donor', N'admin'))
+);
+
+CREATE NONCLUSTERED INDEX IX_app_users_supporter_id
+    ON dbo.app_users (supporter_id)
+    WHERE supporter_id IS NOT NULL;
+
+CREATE NONCLUSTERED INDEX IX_app_users_role
+    ON dbo.app_users (role)
+    INCLUDE (email, is_active);
+GO
