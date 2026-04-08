@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:lighthouse-storytelling.azurewebsites.net)",
+      "Bash(curl -s \"https://lighthouse-storytelling.azurewebsites.net/api/supporter-impact/1\")",
+      "Bash(curl -s -X POST \"https://lighthouse-storytelling.azurewebsites.net/api/projected-impact\" -H \"Content-Type: application/json\" -d '{\"amount_php\": 1400, \"program_area\": \"General Fund\"}')"
+    ]
+  }
+}

@@ -47,6 +47,7 @@ export const api = {
     register:   (email: string, password: string, displayName: string) =>
       request('/api/auth/register', { method: 'POST', body: JSON.stringify({ email, password, displayName }) }),
     me:         () => request<MeResponse>('/api/auth/me'),
+    mySupporter: () => request<SupporterProfile | null>('/api/auth/me/supporter').then(r => r ?? null),
     mfaSetup:   () => request<MfaSetupResponse>('/api/auth/mfa/setup'),
     mfaEnable:  (code: string) =>
       request('/api/auth/mfa/enable', { method: 'POST', body: JSON.stringify({ code }) }),
@@ -133,6 +134,7 @@ export const api = {
   },
 
   safehouses: {
+    regions: () => request<string[]>('/api/safehouses/regions'),
     list:   (status?: string) => request<Safehouse[]>(`/api/safehouses${status ? `?status=${status}` : ''}`),
     get:    (id: number) => request<Safehouse>(`/api/safehouses/${id}`),
     create: (data: Partial<Safehouse>) =>
@@ -140,6 +142,23 @@ export const api = {
     update: (id: number, data: Partial<Safehouse>) =>
       request(`/api/safehouses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request(`/api/safehouses/${id}`, { method: 'DELETE' }),
+  },
+
+  storytelling: {
+    timePeriodSummary: (start: string, end: string) =>
+      request<TimePeriodImpactResponse>(
+        `/api/storytelling/time-period-summary?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
+      ),
+    supporterImpact: (supporterId: number) =>
+      request<SupporterImpactResponse>(`/api/storytelling/supporter-impact/${supporterId}`),
+    projectedImpact: (amountPhp: number, programArea: string) =>
+      request<ProjectedImpactResponse>('/api/storytelling/projected-impact', {
+        method: 'POST',
+        body: JSON.stringify({
+          amount_php: amountPhp,
+          program_area: programArea,
+        }),
+      }),
   },
 
   // ─── ML Stubs ──────────────────────────────────────────────────────────────
@@ -349,6 +368,20 @@ export interface CreateDonationDto {
   campaignName?: string;
   channelSource?: string;
   notes?: string;
+  donorName?: string;
+  email?: string;
+  phone?: string;
+  region?: string;
+  country?: string;
+}
+
+export interface SupporterProfile {
+  supporterId: number;
+  displayName: string;
+  email?: string;
+  phone?: string;
+  region?: string;
+  country?: string;
 }
 
 export interface Supporter {
@@ -383,4 +416,40 @@ export interface Safehouse {
   capacityStaff: number;
   currentOccupancy: number;
   notes?: string;
+}
+
+export interface TimePeriodImpactResponse {
+  start_date?: string;
+  end_date?: string;
+  total_donations?: number;
+  n_donations?: number;
+  safehouses_supported?: number;
+  resident_months?: number;
+  avg_education_progress?: number;
+  avg_health_score?: number;
+  narrative?: string;
+}
+
+export interface SupporterImpactResponse {
+  supporter_id?: number;
+  donation_count?: number;
+  total_contributed?: number; // PHP
+  safehouses_reached?: number;
+  residents_served_est?: number;
+  projected_months_per_person_funded?: number;
+  avg_education_progress?: number;
+  avg_health_score?: number;
+  narrative?: string;
+}
+
+export interface ProjectedImpactResponse {
+  likely_safehouse?: string;
+  projected_resident_months?: number;
+  program_breakdown?: Record<string, number>;
+  typical_outcomes?: {
+    avg_education_progress?: number;
+    avg_health_score?: number;
+    avg_attendance_rate?: number;
+  };
+  narrative?: string;
 }

@@ -78,7 +78,6 @@ public class Donation
     public bool IsRecurring { get; set; }
     [MaxLength(100)] public string? CampaignName { get; set; }
     public string? Notes { get; set; }
-    public int? CreatedByPartnerId { get; set; }
     public int? ReferralPostId { get; set; }
 
     [ForeignKey("SupporterId")] public Supporter Supporter { get; set; } = null!;
