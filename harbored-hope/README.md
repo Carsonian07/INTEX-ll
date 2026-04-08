@@ -42,7 +42,7 @@ dotnet run
 ```
 
 The API seeds default accounts on first run:
-- **Admin**: `admin@harboredhope.org` / `AdminDev123!@#`
+- **Admin**: `admin@harboredhope.org` / `AdminDev123!@#` 
 - **Donor**: `donor@harboredhope.org` / `DonorDev123!@#`
 
 ### Frontend

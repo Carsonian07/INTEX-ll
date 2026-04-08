@@ -1,4 +1,7 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
+const envBaseUrl = import.meta.env.VITE_API_URL?.trim();
+const BASE_URL = envBaseUrl
+  ? envBaseUrl.replace(/\/+$/, '')
+  : (import.meta.env.DEV ? '' : 'http://localhost:5000');
 
 function getToken(): string | null {
   return localStorage.getItem('hh_token');
