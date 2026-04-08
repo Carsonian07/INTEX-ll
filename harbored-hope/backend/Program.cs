@@ -117,11 +117,10 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // ─── HTTPS / HSTS ─────────────────────────────────────────────────────────────
-app.UseHttpsRedirection();
-
 if (!app.Environment.IsDevelopment())
 {
-    app.UseHsts();  // Adds Strict-Transport-Security header in production
+    app.UseHttpsRedirection();
+    app.UseHsts();
 }
 
 // ─── Content Security Policy Header ──────────────────────────────────────────
