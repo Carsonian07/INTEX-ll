@@ -25,7 +25,7 @@ builder.Services.AddDbContext<AuthDbContext>(options =>
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 {
     // Password policy — stricter than defaults, per class instruction
-    options.Password.RequiredLength = 12;
+    options.Password.RequiredLength = 14;
     options.Password.RequireUppercase = true;
     options.Password.RequireLowercase = true;
     options.Password.RequireDigit = true;

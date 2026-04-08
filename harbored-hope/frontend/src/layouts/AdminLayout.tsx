@@ -54,6 +54,32 @@ export default function AdminLayout() {
                 <span className="text-base leading-none">➕</span>
                 Add resident
               </NavLink>
+              <NavLink
+                to="/admin/users"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                    isActive
+                      ? 'bg-hh-ocean/20 text-white font-medium'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  }`
+                }
+              >
+                <span className="text-base leading-none">🔑</span>
+                User accounts
+              </NavLink>
+              <NavLink
+                to="/admin/security"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                    isActive
+                      ? 'bg-hh-ocean/20 text-white font-medium'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  }`
+                }
+              >
+                <span className="text-base leading-none">🛡️</span>
+                My security
+              </NavLink>
             </div>
           )}
         </nav>

@@ -36,6 +36,7 @@ export default function PublicLayout() {
               <Link to="/privacy" className="text-sm text-gray-600 dark:text-gray-300 hover:text-hh-navy dark:hover:text-white transition-colors">Privacy</Link>
               {isAdmin && <Link to="/admin" className="text-sm text-gray-600 dark:text-gray-300 hover:text-hh-navy transition-colors">Admin portal</Link>}
               {isDonor && !isAdmin && <Link to="/donor" className="text-sm text-gray-600 dark:text-gray-300 hover:text-hh-navy transition-colors">My donations</Link>}
+              {isDonor && !isAdmin && <Link to="/donor/security" className="text-sm text-gray-600 dark:text-gray-300 hover:text-hh-navy transition-colors">Security</Link>}
 
               {/* Theme toggle */}
               <button onClick={toggleTheme} className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Toggle theme">

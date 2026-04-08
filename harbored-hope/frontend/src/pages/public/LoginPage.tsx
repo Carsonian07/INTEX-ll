@@ -25,7 +25,7 @@ export default function LoginPage() {
         await login(res.token);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed.');
+      setError('Incorrect username or password.');
     } finally {
       setLoading(false);
     }

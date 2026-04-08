@@ -21,16 +21,23 @@ async function request<T>(
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if (res.status === 401) {
-    // Token expired — clear and redirect to login
-    localStorage.removeItem('hh_token');
-    localStorage.removeItem('hh_user');
-    window.location.href = '/login';
-    throw new Error('Unauthorized');
+    // Only redirect if there was an existing token (expired session).
+    // If there's no token, this is a failed login attempt — let the error bubble up normally.
+    if (getToken()) {
+      localStorage.removeItem('hh_token');
+      localStorage.removeItem('hh_user');
+      window.location.href = '/login';
+    }
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.message ?? 'Incorrect username or password.');
   }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Request failed' }));
-    throw new Error(err.message ?? `HTTP ${res.status}`);
+    const message = err.message
+      ?? (Array.isArray(err.errors) ? err.errors.join(' ') : undefined)
+      ?? `HTTP ${res.status}`;
+    throw new Error(message);
   }
 
   if (res.status === 204) return undefined as T;
@@ -140,6 +147,17 @@ export const api = {
     update: (id: number, data: Partial<Safehouse>) =>
       request(`/api/safehouses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request(`/api/safehouses/${id}`, { method: 'DELETE' }),
+  },
+
+  // ─── Admin: User Management ────────────────────────────────────────────────
+  admin: {
+    users: {
+      list:    () => request<AdminUser[]>('/api/admin/users'),
+      setRole: (userId: string, role: string) =>
+        request(`/api/admin/users/${userId}/role`, { method: 'PUT', body: JSON.stringify({ role }) }),
+      delete: (userId: string) =>
+        request(`/api/admin/users/${userId}`, { method: 'DELETE' }),
+    },
   },
 
   // ─── ML Stubs ──────────────────────────────────────────────────────────────
@@ -367,6 +385,15 @@ export interface Supporter {
   firstDonationDate?: string;
   acquisitionChannel?: string;
   createdAt: string;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  displayName: string;
+  twoFactorEnabled: boolean;
+  supporterId?: number;
+  roles: string[];
 }
 
 export interface Safehouse {
