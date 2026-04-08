@@ -19,8 +19,8 @@
   //   Portal "Integrated" auth is Windows-oriented; on Mac use Default + Entra user with DB access.
   //   "Server=tcp:YOUR_SERVER.database.windows.net,1433;Initial Catalog=YOUR_DB;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;"
   "ConnectionStrings": {
-    "OperationalDb": "Server=tcp:YOUR_SERVER.database.windows.net,1433;Initial Catalog=YOUR_DB;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;",
-    "IdentityDb": "Server=tcp:YOUR_SERVER.database.windows.net,1433;Initial Catalog=YOUR_DB;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;"
+    "OperationalDb": "Server=tcp:harboredhope-1.database.windows.net,1433;Initial Catalog=harboredhopedb-1;User Id=harbored_dev;Password=INSERTPASSWORDHERE;Encrypt=True;TrustServerCertificate=False;",
+    "IdentityDb": "Server=tcp:harboredhope-1.database.windows.net,1433;Initial Catalog=harboredhopedb-1;User Id=harbored_dev;Password=INSERTPASSWORDHERE;Encrypt=True;TrustServerCertificate=False;"
   },
 
   // ─── JWT ──────────────────────────────────────────────────────────────────────
