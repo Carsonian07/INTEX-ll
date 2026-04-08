@@ -159,6 +159,21 @@ export const api = {
     predictDonationValue: (body: unknown) => request<{prediction:number;target_col:string}>('/api/social-planner/predict/donation-value',  { method: 'POST', body: JSON.stringify(body) }),
   },
 
+  // ─── Storytelling ──────────────────────────────────────────────────────────
+  storytelling: {
+    timePeriodSummary: (start: string, end: string) =>
+      request<TimePeriodImpactResponse>(
+        `/api/storytelling/time-period-summary?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
+      ),
+    supporterImpact: (supporterId: number) =>
+      request<SupporterImpactResponse>(`/api/storytelling/supporter-impact/${supporterId}`),
+    projectedImpact: (amountPhp: number, programArea: string) =>
+      request<ProjectedImpactResponse>('/api/storytelling/projected-impact', {
+        method: 'POST',
+        body: JSON.stringify({ amount_php: amountPhp, program_area: programArea }),
+      }),
+  },
+
   // ─── ML Stubs ──────────────────────────────────────────────────────────────
   ml: {
     reintegrationReadiness: (residentId: number) =>
@@ -358,6 +373,11 @@ export interface PaginatedResponse<T> {
   pageSize: number;
   data: T[];
 }
+
+// ─── Storytelling types (stubbed — fill in when storytelling branch merges) ───
+export interface TimePeriodImpactResponse { [key: string]: unknown; }
+export interface SupporterImpactResponse  { [key: string]: unknown; }
+export interface ProjectedImpactResponse  { [key: string]: unknown; }
 
 export interface ResidentListParams {
   status?: string;
