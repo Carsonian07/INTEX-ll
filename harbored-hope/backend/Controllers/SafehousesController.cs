@@ -11,6 +11,19 @@ namespace HarboredHope.API.Controllers;
 [Authorize]
 public class SafehousesController(AppDbContext db) : ControllerBase
 {
+    [HttpGet("regions")]
+    public async Task<IActionResult> GetRegions()
+    {
+        var regions = await db.Safehouses
+            .Where(s => s.Region != null && s.Region != "")
+            .Select(s => s.Region)
+            .Distinct()
+            .OrderBy(r => r)
+            .ToListAsync();
+
+        return Ok(regions);
+    }
+
     [HttpGet]
     [Authorize(Roles = "Admin,Staff")]
     public async Task<IActionResult> GetAll([FromQuery] string? status)

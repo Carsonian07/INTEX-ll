@@ -1,8 +1,10 @@
 using HarboredHope.API.Data;
+using HarboredHope.API.Models;
 using HarboredHope.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 
 namespace HarboredHope.API.Controllers
@@ -15,16 +17,19 @@ namespace HarboredHope.API.Controllers
         private readonly SignInManager<AppUser> _signInManager;
         private readonly ITokenService _tokenService;
         private readonly ILogger<AuthController> _logger;
+        private readonly AppDbContext _db;
 
         public AuthController(
             UserManager<AppUser> userManager,
             SignInManager<AppUser> signInManager,
             ITokenService tokenService,
+            AppDbContext db,
             ILogger<AuthController> logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _tokenService = tokenService;
+            _db = db;
             _logger = logger;
         }
 
@@ -116,11 +121,22 @@ namespace HarboredHope.API.Controllers
             if (!result.Succeeded)
                 return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
 
+            var supporter = await EnsureSupporterForDonorAsync(user, req.DisplayName);
             await _userManager.AddToRoleAsync(user, "Donor");
+
+            var token = await _tokenService.GenerateTokenAsync(user);
+            var roles = await _userManager.GetRolesAsync(user);
 
             _logger.LogInformation("New donor registered: {Email}", req.Email);
 
-            return CreatedAtAction(nameof(Me), new { }, new { message = "Account created successfully." });
+            return CreatedAtAction(nameof(Me), new { }, new LoginResponse
+            {
+                Token = token,
+                Email = user.Email,
+                DisplayName = user.DisplayName,
+                Roles = roles.ToList(),
+                MfaRequired = false
+            });
         }
 
         [Authorize]
@@ -140,6 +156,39 @@ namespace HarboredHope.API.Controllers
                 user.SupporterId,
                 user.TwoFactorEnabled,
                 Roles = roles
+            });
+        }
+
+        [Authorize]
+        [HttpGet("me/supporter")]
+        public async Task<IActionResult> MySupporterProfile()
+        {
+            var user = await ResolveCurrentUserAsync();
+            if (user == null) return Unauthorized();
+
+            Supporter? supporter = null;
+
+            if (user.SupporterId.HasValue)
+            {
+                supporter = await _db.Supporters.FirstOrDefaultAsync(s => s.SupporterId == user.SupporterId.Value);
+            }
+
+            if (supporter == null && !string.IsNullOrWhiteSpace(user.Email))
+            {
+                supporter = await _db.Supporters.FirstOrDefaultAsync(s => s.Email == user.Email);
+            }
+
+            if (supporter == null)
+                return NoContent();
+
+            return Ok(new
+            {
+                supporter.SupporterId,
+                supporter.DisplayName,
+                supporter.Email,
+                supporter.Phone,
+                supporter.Region,
+                supporter.Country
             });
         }
 
@@ -210,6 +259,70 @@ namespace HarboredHope.API.Controllers
             return "otpauth://totp/HarboredHope:" + encodedEmail
                 + "?secret=" + encodedKey
                 + "&issuer=HarboredHope&digits=6";
+        }
+
+        private async Task<Supporter?> EnsureSupporterForDonorAsync(AppUser user, string? displayName)
+        {
+            if (!string.IsNullOrWhiteSpace(user.Email))
+            {
+                var existing = await _db.Supporters.FirstOrDefaultAsync(s => s.Email == user.Email);
+                if (existing != null)
+                {
+                    if (user.SupporterId != existing.SupporterId)
+                    {
+                        user.SupporterId = existing.SupporterId;
+                        await _userManager.UpdateAsync(user);
+                    }
+                    return existing;
+                }
+            }
+
+            var supporter = new Supporter
+            {
+                SupporterType = TrimTo("Individual", 19),
+                DisplayName = TrimTo(string.IsNullOrWhiteSpace(displayName) ? (user.Email ?? "Donor") : displayName, 17),
+                FirstName = TrimTo(displayName?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(), 6),
+                RelationshipType = TrimTo("Donor", 19),
+                Region = TrimTo("Unknown", 8),
+                Country = TrimTo("USA", 11),
+                Email = TrimTo(user.Email ?? "unknown@local", 37),
+                Phone = TrimTo("Unknown", 17),
+                Status = TrimTo("Active", 8),
+                AcquisitionChannel = TrimTo("Direct", 15),
+                CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
+            };
+
+            _db.Supporters.Add(supporter);
+            await _db.SaveChangesAsync();
+
+            user.SupporterId = supporter.SupporterId;
+            await _userManager.UpdateAsync(user);
+
+            return supporter;
+        }
+
+        private async Task<AppUser?> ResolveCurrentUserAsync()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user != null)
+                return user;
+
+            var email = User.Claims.FirstOrDefault(c =>
+                c.Type == System.Security.Claims.ClaimTypes.Email ||
+                c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Email)?.Value;
+
+            if (!string.IsNullOrWhiteSpace(email))
+                return await _userManager.FindByEmailAsync(email);
+
+            return null;
+        }
+
+        private static string? TrimTo(string? value, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return value;
+
+            return value.Length <= maxLength ? value : value[..maxLength];
         }
     }
 
