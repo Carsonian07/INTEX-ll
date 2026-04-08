@@ -21,40 +21,62 @@ public static class SeedData
         }
 
         var adminEmail = config["Seed:AdminEmail"] ?? "admin@harboredhope.org";
-        var adminPwd = config["Seed:AdminPassword"] ?? "AdminPass123!@#";
-
-        if (await userManager.FindByEmailAsync(adminEmail) == null)
-        {
-            var admin = new AppUser
-            {
-                UserName = adminEmail,
-                Email = adminEmail,
-                DisplayName = "System Admin",
-                EmailConfirmed = true
-            };
-
-            var result = await userManager.CreateAsync(admin, adminPwd);
-            if (result.Succeeded)
-                await userManager.AddToRoleAsync(admin, "Admin");
-        }
+        var adminPwd = config["Seed:AdminPassword"] ?? "AdminDev123!@#";
+        await EnsureSeedUserAsync(
+            userManager,
+            adminEmail,
+            adminPwd,
+            "System Admin",
+            "Admin");
 
         var donorEmail = config["Seed:DonorEmail"] ?? "donor@harboredhope.org";
-        var donorPwd = config["Seed:DonorPassword"] ?? "DonorPass123!@#";
+        var donorPwd = config["Seed:DonorPassword"] ?? "DonorDev123!@#";
+        await EnsureSeedUserAsync(
+            userManager,
+            donorEmail,
+            donorPwd,
+            "Demo Donor",
+            "Donor",
+            1);
+    }
 
-        if (await userManager.FindByEmailAsync(donorEmail) == null)
+    private static async Task EnsureSeedUserAsync(
+        UserManager<AppUser> userManager,
+        string email,
+        string password,
+        string displayName,
+        string role,
+        int? supporterId = null)
+    {
+        var user = await userManager.FindByEmailAsync(email);
+
+        if (user == null)
         {
-            var donor = new AppUser
+            user = new AppUser
             {
-                UserName = donorEmail,
-                Email = donorEmail,
-                DisplayName = "Demo Donor",
+                UserName = email,
+                Email = email,
+                DisplayName = displayName,
                 EmailConfirmed = true,
-                SupporterId = 1
+                SupporterId = supporterId
             };
 
-            var result = await userManager.CreateAsync(donor, donorPwd);
-            if (result.Succeeded)
-                await userManager.AddToRoleAsync(donor, "Donor");
+            var createResult = await userManager.CreateAsync(user, password);
+            if (!createResult.Succeeded)
+                return;
         }
+        else
+        {
+            user.DisplayName = displayName;
+            user.EmailConfirmed = true;
+            user.SupporterId = supporterId;
+            await userManager.UpdateAsync(user);
+
+            var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
+            await userManager.ResetPasswordAsync(user, resetToken, password);
+        }
+
+        if (!await userManager.IsInRoleAsync(user, role))
+            await userManager.AddToRoleAsync(user, role);
     }
 }
