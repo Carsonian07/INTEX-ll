@@ -14,6 +14,15 @@ A web application for managing safe homes and rehabilitation services for girls 
 
 ---
 
+## Machine learning APIs
+
+| API | URL |
+|-----|-----|
+| ML pipelines (recommendations, predictions, etc.) | https://harboredhope-ml-api.azurewebsites.net/docs#/ |
+| Donor storytelling API | https://lighthouse-storytelling.azurewebsites.net/docs |
+
+---
+
 ## Local development setup
 
 ### Prerequisites
@@ -21,35 +30,27 @@ A web application for managing safe homes and rehabilitation services for girls 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - [Node.js 22+](https://nodejs.org/)
 
-No SQL Server, Docker, or Azure CLI required for teammates.
+No SQL Server, Docker, or Azure CLI required.
 
 ---
 
 ### Backend
 
-**Step 1 — Get `appsettings.Development.json` from John**
+**Step 1 — Create `appsettings.Development.json`**
 
-Ask John to share the `appsettings.Development.json` file directly (via Slack DM, Discord, etc.) and place it at `harbored-hope/backend/appsettings.Development.json`.
+Copy the example file and fill in the database password:
+
+```bash
+cp harbored-hope/backend/appsettings.Development.example.jsonc harbored-hope/backend/appsettings.Development.json
+```
+
+Then open the file and replace `INSERTPASSWORDHERE` with the password John provides.
 
 > This file is gitignored — never commit it. It contains database credentials.
 
-The database uses **Azure SQL with Microsoft Entra (Azure AD) authentication**. Your Azure AD account must be granted access by John before you can connect.
+The database is Azure SQL using a shared SQL username/password (`harbored_dev`). No Azure CLI or `az login` is needed.
 
-**macOS / Linux** — install the Azure CLI and sign in:
-
-```bash
-brew install azure-cli       # macOS (Homebrew)
-az login
-```
-
-**Windows** — install the Azure CLI, then sign in:
-
-```powershell
-winget install Microsoft.AzureCLI   # or download from https://aka.ms/installazurecliwindows
-az login
-```
-
-`az login` opens a browser window. Sign in with the Microsoft account John has given access to. After that, the connection string in `appsettings.Development.json` will authenticate automatically using `Active Directory Default`.
+> **Can't connect?** Your machine's IP must be whitelisted in Azure Portal → SQL Server → Networking → Firewall rules. Ask John to add your IP address.
 
 **Step 2 — Restore and run**
 
@@ -60,7 +61,7 @@ dotnet restore
 dotnet run
 ```
 
-Windows (Command Prompt or PowerShell):
+Windows:
 ```powershell
 cd harbored-hope\backend
 dotnet restore
@@ -73,7 +74,7 @@ On first run it automatically seeds two test accounts:
 - **Admin**: `admin@harboredhope.org` / `AdminDev123!@#`
 - **Donor**: `donor@harboredhope.org` / `DonorDev123!@#`
 
-> You do not need to run migrations — the database is already set up in Azure. Migrations only need to be run when the database schema changes.
+> You do not need to run migrations — the database is already set up in Azure.
 
 ---
 
@@ -87,14 +88,6 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Windows (Command Prompt):
-```cmd
-cd harbored-hope\frontend
-npm install
-copy .env.example .env.local
-npm run dev
-```
-
 Windows (PowerShell):
 ```powershell
 cd harbored-hope\frontend
@@ -103,7 +96,7 @@ Copy-Item .env.example .env.local
 npm run dev
 ```
 
-The dev server starts on **http://localhost:5173** and automatically proxies `/api` calls to the backend at `http://localhost:5000`, so no extra config is needed.
+The dev server starts on **http://localhost:5173** and automatically proxies `/api` calls to the backend at `http://localhost:5000`.
 
 ---
 
@@ -111,26 +104,12 @@ The dev server starts on **http://localhost:5173** and automatically proxies `/a
 
 Open two terminal tabs / windows:
 
-macOS / Linux:
 ```bash
 # Terminal 1 — backend
-cd harbored-hope/backend
-dotnet run
+cd harbored-hope/backend && dotnet run
 
 # Terminal 2 — frontend
-cd harbored-hope/frontend
-npm run dev
-```
-
-Windows:
-```powershell
-# Window 1 — backend
-cd harbored-hope\backend
-dotnet run
-
-# Window 2 — frontend
-cd harbored-hope\frontend
-npm run dev
+cd harbored-hope/frontend && npm run dev
 ```
 
 Then open http://localhost:5173 in your browser.
@@ -139,9 +118,7 @@ Then open http://localhost:5173 in your browser.
 
 ## Database access (John only)
 
-The Azure SQL database is managed by John. Teammates connect using the shared credentials in `appsettings.Development.json` — ask John for that file.
-
-To run migrations when the schema changes (John only, requires `az login`):
+To run migrations when the schema changes:
 
 macOS / Linux:
 ```bash
@@ -177,8 +154,8 @@ Set these in repository Settings → Secrets and variables → Actions:
 Set these in Azure portal → App Service → Configuration → Application settings:
 
 ```
-ConnectionStrings__OperationalDb   = Server=tcp:harboredhope-1.database.windows.net,1433;Initial Catalog=harboredhopedb-1;...
-ConnectionStrings__IdentityDb      = Server=tcp:harboredhope-1.database.windows.net,1433;Initial Catalog=harboredhopedb-1;...
+ConnectionStrings__OperationalDb   = Server=tcp:harboredhope-1.database.windows.net,1433;...
+ConnectionStrings__IdentityDb      = Server=tcp:harboredhope-1.database.windows.net,1433;...
 Jwt__Key                           = <32+ char random secret>
 Jwt__Issuer                        = HarboredHopeAPI
 Jwt__Audience                      = HarboredHopeApp
@@ -192,7 +169,7 @@ ASPNETCORE_ENVIRONMENT             = Production
 
 ---
 
-## Security features implemented
+## Security features
 
 | Feature | Where |
 |---------|-------|

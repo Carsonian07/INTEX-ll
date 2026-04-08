@@ -1,8 +1,9 @@
 {
 
-    // ─── HOW TO USE ───────────────────────────────────────────────────────────────
+  // ─── HOW TO USE ───────────────────────────────────────────────────────────────
   // Copy this file to appsettings.Development.json and fill in the values below.
   // appsettings.Development.json is gitignored — never commit the real file.
+  // Ask John for the real database password to replace INSERTPASSWORDHERE.
   // ─────────────────────────────────────────────────────────────────────────────
 
   "AllowedOrigins": [
@@ -10,45 +11,31 @@
   ],
 
   // ─── Database ─────────────────────────────────────────────────────────────────
-  // Option A: SQL Server LocalDB (Windows only)
-  //   "Server=(localdb)\\mssqllocaldb;Database=HarboredHopeOperational;Trusted_Connection=True;"
-  // Option B: Docker / on-prem SQL auth
-  //   "Server=localhost;Database=HarboredHopeOperational;User Id=sa;Password=YOUR_SA_PASSWORD;TrustServerCertificate=True;"
-  // Option C: Azure SQL + Microsoft Entra (macOS/Linux/VS: use Active Directory Default, then `az login`)
-  //   Same catalog can be used for both OperationalDb and IdentityDb.
-  //   Portal "Integrated" auth is Windows-oriented; on Mac use Default + Entra user with DB access.
-  //   "Server=tcp:YOUR_SERVER.database.windows.net,1433;Initial Catalog=YOUR_DB;Encrypt=True;TrustServerCertificate=False;Authentication=Active Directory Default;"
+  // Uses Azure SQL with a shared SQL username/password (no Azure CLI or az login needed).
+  // Replace INSERTPASSWORDHERE with the password John provides.
+  // NOTE: Your machine's IP must be whitelisted in Azure Portal → SQL Server →
+  //       Networking → Firewall rules. Ask John to add your IP if you can't connect.
   "ConnectionStrings": {
     "OperationalDb": "Server=tcp:harboredhope-1.database.windows.net,1433;Initial Catalog=harboredhopedb-1;User Id=harbored_dev;Password=INSERTPASSWORDHERE;Encrypt=True;TrustServerCertificate=False;",
     "IdentityDb": "Server=tcp:harboredhope-1.database.windows.net,1433;Initial Catalog=harboredhopedb-1;User Id=harbored_dev;Password=INSERTPASSWORDHERE;Encrypt=True;TrustServerCertificate=False;"
   },
 
   // ─── JWT ──────────────────────────────────────────────────────────────────────
-  // Key must be at least 32 characters. Use any long random string for dev.
-  // Issuer and Audience should match what the frontend expects (defaults are fine).
+  // Key must be at least 32 characters.
   "Jwt": {
-    "Key":      "REPLACE_WITH_A_LONG_RANDOM_DEV_SECRET_32CHARS_MIN",
+    "Key":      "DEV_ONLY_REPLACE_IN_PROD_ABCDEFGHIJKLMNOPQRSTUVWXYZ123456",
     "Issuer":   "HarboredHopeAPI",
     "Audience": "HarboredHopeApp"
   },
 
   // ─── Seed Accounts ───────────────────────────────────────────────────────────
   // These are created automatically on first run (via SeedData.InitializeAsync).
-  // Password must satisfy the policy: 12+ chars, upper, lower, digit, special, 6 unique.
   "Seed": {
     "AdminEmail":    "admin@harboredhope.org",
-    "AdminPassword": "REPLACE_WITH_ADMIN_DEV_PASSWORD",
+    "AdminPassword": "AdminDev123!@#",
     "DonorEmail":    "donor@harboredhope.org",
-    "DonorPassword": "REPLACE_WITH_DONOR_DEV_PASSWORD"
+    "DonorPassword": "DonorDev123!@#"
   },
-
-  // ─── Email (stub in dev — logs to console) ───────────────────────────────────
-  // MFA codes print to the console in dev, so no real email setup is needed.
-  // When wired up, set SENDGRID_API_KEY as an env var or in this file:
-  // "SendGrid": {
-  //   "ApiKey": "SG.REPLACE_WITH_SENDGRID_KEY",
-  //   "FromEmail": "no-reply@harboredhope.org"
-  // },
 
   "Logging": {
     "LogLevel": {
