@@ -1,27 +1,39 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { api, mlApi, buildResidentRiskInput, Resident, ProcessRecording, HomeVisitation, ResidentRiskResult } from '../../lib/api';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { api, mlApi, buildResidentRiskInput, Resident, ProcessRecording, HomeVisitation, InterventionPlan, ResidentRiskResult } from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
-type Tab = 'profile' | 'counseling' | 'visitations' | 'ml';
+type Tab = 'profile' | 'counseling' | 'visitations' | 'conferences' | 'ml';
 
 const RISK_COLORS: Record<string, string> = {
   Low: 'bg-green-100 text-green-800', Medium: 'bg-yellow-100 text-yellow-800',
   High: 'bg-orange-100 text-orange-800', Critical: 'bg-red-100 text-red-800',
 };
 
+const EMOTION_SCORE: Record<string, number> = {
+  Happy: 5, Hopeful: 4, Calm: 3, Withdrawn: 2, Anxious: 2, Sad: 1, Angry: 1, Distressed: 0,
+};
+
+const today = new Date().toISOString().split('T')[0];
+
 export default function ResidentDetail() {
   const { id } = useParams<{ id: string }>();
   const residentId = Number(id);
+  const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
-  const [resident, setResident]       = useState<Resident | null>(null);
-  const [recordings, setRecordings]   = useState<ProcessRecording[]>([]);
-  const [visitations, setVisitations] = useState<HomeVisitation[]>([]);
-  const [riskData, setRiskData]        = useState<ResidentRiskResult | null>(null);
-  const [riskLoading, setRiskLoading]  = useState(false);
-  const [riskError, setRiskError]      = useState<string | null>(null);
-  const [tab, setTab]                 = useState<Tab>('profile');
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState<string | null>(null);
+  const [resident, setResident]         = useState<Resident | null>(null);
+  const [recordings, setRecordings]     = useState<ProcessRecording[]>([]);
+  const [visitations, setVisitations]   = useState<HomeVisitation[]>([]);
+  const [plans, setPlans]               = useState<InterventionPlan[]>([]);
+  const [riskData, setRiskData]         = useState<ResidentRiskResult | null>(null);
+  const [riskLoading, setRiskLoading]   = useState(false);
+  const [riskError, setRiskError]       = useState<string | null>(null);
+  const [tab, setTab]                   = useState<Tab>('profile');
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen]     = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -29,13 +41,14 @@ export default function ResidentDetail() {
     api.residents.get(residentId)
       .then(r => {
         setResident(r);
-        // Load sub-resources in parallel, but don't block the page if they fail
         Promise.all([
           api.residents.processRecordings.list(residentId).catch(() => [] as ProcessRecording[]),
           api.residents.homeVisitations.list(residentId).catch(() => [] as HomeVisitation[]),
-        ]).then(([pr, hv]) => {
+          api.residents.interventionPlans.list(residentId).catch(() => [] as InterventionPlan[]),
+        ]).then(([pr, hv, ip]) => {
           setRecordings(pr);
           setVisitations(hv);
+          setPlans(ip as InterventionPlan[]);
         });
       })
       .catch(err => setError(err?.message ?? 'Failed to load resident'))
@@ -45,7 +58,6 @@ export default function ResidentDetail() {
   useEffect(() => {
     if (tab === 'ml' && resident && !riskData && !riskLoading && !riskError) {
       setRiskLoading(true);
-      // Use the chronologically first recording (list is sorted descending, so last in array)
       const firstRecording = recordings.length > 0 ? recordings[recordings.length - 1] : undefined;
       const input = buildResidentRiskInput(resident, firstRecording);
       mlApi.residentRisk(input)
@@ -55,15 +67,25 @@ export default function ResidentDetail() {
     }
   }, [tab, resident, recordings, riskData, riskLoading, riskError]);
 
+  const handleDelete = async () => {
+    await api.residents.delete(residentId);
+    navigate('/admin/residents');
+  };
+
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-7 w-7 border-b-2 border-hh-navy"/></div>;
   if (error) return <div className="p-8 text-red-500">Error: {error}</div>;
   if (!resident) return <div className="p-8 text-gray-400">Resident not found.</div>;
 
+  const conferences = plans.filter(p => p.caseConferenceDate);
+  const upcomingConfs = conferences.filter(p => p.caseConferenceDate! >= today).sort((a, b) => a.caseConferenceDate!.localeCompare(b.caseConferenceDate!));
+  const pastConfs    = conferences.filter(p => p.caseConferenceDate! < today).sort((a, b) => b.caseConferenceDate!.localeCompare(a.caseConferenceDate!));
+
   const tabs: { key: Tab; label: string }[] = [
-    { key: 'profile',    label: 'Case profile' },
-    { key: 'counseling', label: `Counseling (${recordings.length})` },
+    { key: 'profile',     label: 'Case profile' },
+    { key: 'counseling',  label: `Counseling (${recordings.length})` },
     { key: 'visitations', label: `Home visits (${visitations.length})` },
-    { key: 'ml',         label: 'Predictive risk levels' },
+    { key: 'conferences', label: `Conferences (${conferences.length})` },
+    { key: 'ml',          label: 'Predictive risk' },
   ];
 
   return (
@@ -84,13 +106,25 @@ export default function ResidentDetail() {
               {resident.currentRiskLevel} risk
             </span>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{resident.internalCode} · {resident.safehouseName} · Admitted {new Date(resident.dateOfAdmission).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {resident.internalCode} · {resident.safehouseName} · Admitted {new Date(resident.dateOfAdmission).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </p>
         </div>
         <div className="flex gap-2">
           <Link to={`/admin/residents/${residentId}/process-recordings`}
             className="text-sm bg-hh-ocean text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
             Add session
           </Link>
+          <Link to={`/admin/residents/${residentId}/home-visitations`}
+            className="text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            Log home visit
+          </Link>
+          {isAdmin && (
+            <button onClick={() => setDeleteOpen(true)}
+              className="text-sm border border-red-200 dark:border-red-800 text-red-500 px-4 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+              Delete
+            </button>
+          )}
         </div>
       </div>
 
@@ -159,6 +193,7 @@ export default function ResidentDetail() {
       {/* Counseling tab */}
       {tab === 'counseling' && (
         <div className="space-y-4">
+          {recordings.length >= 2 && <EmotionChart recordings={recordings} />}
           {recordings.length === 0 && <p className="text-sm text-gray-400">No process recordings yet.</p>}
           {recordings.map(r => (
             <div key={r.recordingId} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-5">
@@ -211,7 +246,7 @@ export default function ResidentDetail() {
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{v.observations}</p>
               {v.safetyConcernsNoted && (
                 <div className="mt-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
-                  <p className="text-xs text-red-600 font-medium">⚠ Safety concerns noted</p>
+                  <p className="text-xs text-red-600 font-medium">Safety concerns noted</p>
                   {v.followUpNotes && <p className="text-xs text-red-600 mt-0.5">{v.followUpNotes}</p>}
                 </div>
               )}
@@ -220,11 +255,38 @@ export default function ResidentDetail() {
         </div>
       )}
 
+      {/* Conferences tab */}
+      {tab === 'conferences' && (
+        <div className="space-y-6">
+          {/* Upcoming */}
+          {upcomingConfs.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Upcoming</h3>
+              <div className="space-y-3">
+                {upcomingConfs.map(p => <ConferenceCard key={p.planId} plan={p} upcoming />)}
+              </div>
+            </div>
+          )}
+
+          {/* Past */}
+          {pastConfs.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Past conferences</h3>
+              <div className="space-y-3">
+                {pastConfs.map(p => <ConferenceCard key={p.planId} plan={p} />)}
+              </div>
+            </div>
+          )}
+
+          {conferences.length === 0 && (
+            <p className="text-sm text-gray-400">No case conferences recorded.</p>
+          )}
+        </div>
+      )}
+
       {/* Predictive risk levels tab */}
       {tab === 'ml' && (
         <div className="space-y-4">
-
-          {/* Context banner */}
           <div className="bg-hh-navy-light dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
             <p className="text-xs font-semibold text-hh-navy dark:text-gray-200 uppercase tracking-wider mb-1">About these scores</p>
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -250,48 +312,71 @@ export default function ResidentDetail() {
           )}
 
           {riskData && (() => {
-            const highRiskScore = riskData.risk_score > 0.5;
+            // risk_score is 0–0.5 from the API; multiply by 100 to get the 0–50 display scale
+            // mean = 25 (0.25), 75th percentile = 29 (0.29) — above 29 is elevated risk
+            const displayScore   = riskData.risk_score * 100;
+            const highRiskScore  = riskData.risk_score > 0.25;
             const highStruggling = riskData.struggling_flag === 1;
-            const agree = highRiskScore === highStruggling;
-            const bothNegative = highRiskScore && highStruggling;
-            const bothPositive = !highRiskScore && !highStruggling;
+            const agree          = highRiskScore === highStruggling;
+            const bothNegative   = highRiskScore && highStruggling;
+            const bothPositive   = !highRiskScore && !highStruggling;
+
+            const scoreColor = riskData.risk_score > 0.29
+              ? 'bg-red-500'
+              : riskData.risk_score > 0.25
+              ? 'bg-orange-400'
+              : 'bg-green-500';
+            const scoreBadge = riskData.risk_score > 0.29
+              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+              : riskData.risk_score > 0.25
+              ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+              : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+            const scoreLabel = riskData.risk_score > 0.29 ? 'Above 75th percentile' : riskData.risk_score > 0.25 ? 'Above average' : 'Below average';
 
             return (
               <div className="space-y-4">
-
-                {/* Risk score card */}
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-5">
                   <div className="flex items-start justify-between mb-1">
                     <div>
                       <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Risk score</p>
                       <p className="text-2xl font-semibold text-hh-navy dark:text-white mt-0.5">
-                        {(riskData.risk_score * 100).toFixed(1)}
-                        <span className="text-sm font-normal text-gray-400 ml-1">/ 100</span>
+                        {displayScore.toFixed(1)}
+                        <span className="text-sm font-normal text-gray-400 ml-1">/ 50</span>
                       </p>
                     </div>
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                      riskData.risk_score > 0.7 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                      riskData.risk_score > 0.4 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                      'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    }`}>
-                      {riskData.risk_score > 0.7 ? 'High risk' : riskData.risk_score > 0.4 ? 'Moderate risk' : 'Low risk'}
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${scoreBadge}`}>
+                      {scoreLabel}
                     </span>
                   </div>
-                  <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mt-3 mb-1">
+                  <div className="relative h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-visible mt-3 mb-1">
                     <div
-                      className={`h-full rounded-full transition-all ${
-                        riskData.risk_score > 0.7 ? 'bg-red-500' :
-                        riskData.risk_score > 0.4 ? 'bg-orange-400' : 'bg-green-500'
-                      }`}
-                      style={{ width: `${riskData.risk_score * 100}%` }}
+                      className={`h-full rounded-full transition-all ${scoreColor}`}
+                      style={{ width: `${riskData.risk_score * 200}%` }}
+                    />
+                    {/* Mean marker at 25 (0.5) */}
+                    <div
+                      className="absolute top-[-2px] h-[18px] w-0.5 bg-gray-400 dark:bg-gray-500"
+                      style={{ left: '50%' }}
+                      title="Mean: 25"
+                    />
+                    {/* 75th percentile marker at 29 (0.58) */}
+                    <div
+                      className="absolute top-[-2px] h-[18px] w-0.5 bg-orange-400"
+                      style={{ left: '58%' }}
+                      title="75th percentile: 29"
                     />
                   </div>
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-1 mb-2">
+                    <span>0</span>
+                    <span className="text-gray-400">Mean: 25</span>
+                    <span className="text-orange-400">75th pct: 29</span>
+                    <span>50</span>
+                  </div>
                   <p className="text-xs text-gray-400 mt-2">
-                    Composite score across five recovery outcome dimensions measured from actual resident data — not a social worker estimate. Higher = worse outcomes observed.
+                    Composite score (0–50) across five recovery outcome dimensions. Mean score is 25; scores above 29 indicate the resident is in the top 25% for poor outcomes.
                   </p>
                 </div>
 
-                {/* Struggling probability card */}
                 <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-5">
                   <div className="flex items-start justify-between mb-1">
                     <div>
@@ -329,7 +414,6 @@ export default function ResidentDetail() {
                   </p>
                 </div>
 
-                {/* Conclusion card */}
                 <div className={`rounded-xl p-5 border ${
                   bothNegative  ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
                   bothPositive  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' :
@@ -353,11 +437,11 @@ export default function ResidentDetail() {
                                        'text-amber-700 dark:text-amber-300'
                       }`}>
                         {bothNegative &&
-                          'Both the risk score and struggling probability indicate this resident is experiencing poor outcomes. Consider reviewing their intervention plan and increasing support.'}
+                          'Both the risk score (above 25 — 75th percentile) and struggling probability indicate this resident is experiencing poor outcomes. Consider reviewing their intervention plan and increasing support.'}
                         {bothPositive &&
-                          'Both model signals agree this resident is tracking well. Outcomes across all five dimensions appear within a healthy range compared to peers.'}
+                          'Both model signals agree this resident is tracking well. Risk score is below the population mean and outcomes across all five dimensions appear within a healthy range compared to peers.'}
                         {!agree &&
-                          `The two model signals disagree — the risk score is ${highRiskScore ? 'elevated' : 'low'} but the struggling probability is ${highStruggling ? 'above' : 'below'} threshold. These measures capture different aspects of recovery; review both alongside the social worker's assessment before drawing conclusions.`}
+                          `The two model signals disagree — the risk score is ${highRiskScore ? 'above the 75th percentile (25)' : 'within normal range'} but the struggling probability is ${highStruggling ? 'above' : 'below'} threshold. These measures capture different aspects of recovery; review both alongside the social worker's assessment before drawing conclusions.`}
                       </p>
                     </div>
                   </div>
@@ -371,16 +455,143 @@ export default function ResidentDetail() {
                     Re-run prediction
                   </button>
                 </div>
-
               </div>
             );
           })()}
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title="Delete resident record?"
+        message="This will permanently remove the resident and all associated records. This action cannot be undone."
+        confirmLabel="Delete permanently"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteOpen(false)}
+        danger
+      />
+    </div>
+  );
+}
+
+// ─── Emotion chart ────────────────────────────────────────────────────────────
+function EmotionChart({ recordings }: { recordings: ProcessRecording[] }) {
+  const sorted = [...recordings]
+    .sort((a, b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime());
+
+  const W = 560, H = 110, PL = 28, PR = 12, PT = 10, PB = 22;
+  const n = sorted.length;
+  const xScale = (i: number) => PL + (i / (n - 1)) * (W - PL - PR);
+  const yScale = (v: number) => PT + ((5 - v) / 5) * (H - PT - PB);
+
+  const scores = sorted.map(r => ({
+    date: r.sessionDate,
+    end: EMOTION_SCORE[r.emotionalStateEnd] ?? 3,
+  }));
+
+  const linePath = scores.map((s, i) => `${i === 0 ? 'M' : 'L'}${xScale(i).toFixed(1)},${yScale(s.end).toFixed(1)}`).join(' ');
+  const areaPath = `${linePath} L${xScale(n - 1).toFixed(1)},${(H - PB).toFixed(1)} L${xScale(0).toFixed(1)},${(H - PB).toFixed(1)} Z`;
+
+  const dotColor = (v: number) => v >= 4 ? '#22c55e' : v >= 3 ? '#0ea5e9' : v >= 2 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-5">
+      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+        Emotional state — end of session
+      </p>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+        {/* Y-axis grid + labels */}
+        {([5, 3, 0] as const).map(v => (
+          <g key={v}>
+            <line x1={PL} x2={W - PR} y1={yScale(v)} y2={yScale(v)}
+              stroke="currentColor" strokeOpacity="0.08" strokeWidth="1" />
+            <text x={PL - 5} y={yScale(v) + 3.5} textAnchor="end" fontSize="9"
+              fill="currentColor" opacity="0.45">
+              {v === 5 ? '+' : v === 3 ? '~' : '−'}
+            </text>
+          </g>
+        ))}
+
+        {/* Threshold line at 3 (neutral) */}
+        <line x1={PL} x2={W - PR} y1={yScale(3)} y2={yScale(3)}
+          stroke="#0ea5e9" strokeOpacity="0.25" strokeDasharray="4 3" strokeWidth="1" />
+
+        {/* Area fill */}
+        <path d={areaPath} fill="#0ea5e9" fillOpacity="0.07" />
+
+        {/* Line */}
+        <path d={linePath} fill="none" stroke="#0ea5e9" strokeWidth="1.75" strokeLinejoin="round" strokeLinecap="round" />
+
+        {/* Dots */}
+        {scores.map((s, i) => (
+          <circle key={i} cx={xScale(i)} cy={yScale(s.end)} r="3.5"
+            fill={dotColor(s.end)} stroke="white" strokeWidth="1.5" />
+        ))}
+
+        {/* X-axis date labels (first and last only) */}
+        <text x={xScale(0)} y={H - 4} textAnchor="middle" fontSize="9" fill="currentColor" opacity="0.45">
+          {new Date(scores[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        </text>
+        {n > 1 && (
+          <text x={xScale(n - 1)} y={H - 4} textAnchor="middle" fontSize="9" fill="currentColor" opacity="0.45">
+            {new Date(scores[n - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </text>
+        )}
+      </svg>
+      <div className="flex gap-4 mt-1 text-[11px] text-gray-400">
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" />Positive (4–5)</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-hh-ocean inline-block" />Neutral (3)</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />Low (2)</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" />Distressed (0–1)</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Conference card ──────────────────────────────────────────────────────────
+function ConferenceCard({ plan, upcoming = false }: { plan: InterventionPlan; upcoming?: boolean }) {
+  return (
+    <div className={`bg-white dark:bg-gray-900 border rounded-xl p-4 ${
+      upcoming
+        ? 'border-hh-ocean/30 dark:border-hh-ocean/20 ring-1 ring-hh-ocean/10'
+        : 'border-gray-100 dark:border-gray-800'
+    }`}>
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="font-medium text-sm text-hh-navy dark:text-white">
+              {new Date(plan.caseConferenceDate!).toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}
+            </span>
+            {upcoming && (
+              <span className="text-[10px] bg-hh-ocean/10 text-hh-ocean dark:text-blue-400 px-1.5 py-0.5 rounded-full font-medium">
+                Upcoming
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-400">{plan.planCategory}</p>
+        </div>
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+          plan.status === 'Completed' ? 'bg-green-100 text-green-700' :
+          plan.status === 'Cancelled' ? 'bg-gray-100 text-gray-500' :
+          'bg-blue-100 text-blue-700'
+        }`}>
+          {plan.status}
+        </span>
+      </div>
+      {plan.planDescription && (
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 leading-relaxed">{plan.planDescription}</p>
+      )}
+      {plan.servicesProvided && (
+        <div className="mt-2 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-1.5">
+          <p className="text-xs text-gray-500 mb-0.5">Services / interventions</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">{plan.servicesProvided}</p>
         </div>
       )}
     </div>
   );
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function InfoSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-5">
@@ -398,3 +609,4 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
     </div>
   );
 }
+
