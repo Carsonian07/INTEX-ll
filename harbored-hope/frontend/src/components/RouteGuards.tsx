@@ -13,11 +13,12 @@ export function RequireAuth({ children, role }: { children: ReactNode; role?: 'A
 }
 
 export function RedirectIfAuthed({ children }: { children: ReactNode }) {
-  const { user, loading, isAdmin, isDonor } = useAuth();
+  const { user, loading, isAdmin, isDonor, isStaff } = useAuth();
   if (loading) return null;
   if (user) {
     if (isAdmin) return <Navigate to="/admin" replace />;
     if (isDonor) return <Navigate to="/donor" replace />;
+    if (isStaff) return <Navigate to="/admin" replace />;
   }
   return <>{children}</>;
 }
