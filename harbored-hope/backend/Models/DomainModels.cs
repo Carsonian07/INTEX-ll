@@ -173,6 +173,7 @@ public class Resident
     [MaxLength(20)] public string? ReintegrationStatus { get; set; }
     [MaxLength(20)] public string InitialRiskLevel { get; set; } = "Medium";
     [MaxLength(20)] public string CurrentRiskLevel { get; set; } = "Medium";
+    public DateOnly DateEnrolled { get; set; }
     public DateOnly? DateClosed { get; set; }
     public string? CreatedAt { get; set; }
 

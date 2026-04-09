@@ -135,6 +135,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 {
     var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
     await authDb.Database.MigrateAsync();
+
 }
 
 // ─── HTTPS / HSTS ─────────────────────────────────────────────────────────────

@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, ResidentListItem, Safehouse } from '../../lib/api';
+import { useAuth } from '../../context/AuthContext';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const RISK_COLORS: Record<string, string> = {
   Low:      'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
@@ -40,11 +42,19 @@ export default function CaseloadInventory() {
   const [page, setPage]       = useState(1);
   const [loading, setLoading] = useState(true);
 
+  // Delete confirmation
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+
   // Add resident drawer
   const [showAdd, setShowAdd]     = useState(false);
   const [addForm, setAddForm]     = useState({ ...defaultAddForm });
   const [addError, setAddError]   = useState('');
   const [addLoading, setAddLoading] = useState(false);
+  const [formOptions, setFormOptions] = useState<{
+    caseCategories: string[];
+    referralSources: string[];
+    socialWorkers: string[];
+  }>({ caseCategories: [], referralSources: [], socialWorkers: [] });
 
   // Filters
   const [search, setSearch]         = useState('');
@@ -77,7 +87,21 @@ export default function CaseloadInventory() {
   useEffect(() => { loadResidents(); }, [loadResidents]);
   useEffect(() => {
     api.safehouses.list('Active').then(setSafehouses).catch(() => {});
+    api.residents.formOptions().then(setFormOptions).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!showAdd) return;
+
+    api.residents.nextCaseControlNo()
+      .then(({ caseControlNo }) => {
+        setAddForm(f => ({
+          ...f,
+          caseControlNo: f.caseControlNo || caseControlNo,
+        }));
+      })
+      .catch(() => {});
+  }, [showAdd]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -134,7 +158,11 @@ export default function CaseloadInventory() {
         </div>
         {isStaff && (
           <button
-            onClick={() => setShowAdd(true)}
+            onClick={() => {
+              setAddForm({ ...defaultAddForm });
+              setAddError('');
+              setShowAdd(true);
+            }}
             className="flex items-center gap-2 bg-hh-navy text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-hh-navy-dark transition-colors"
           >
             <span className="text-base leading-none">+</span>
@@ -163,7 +191,7 @@ export default function CaseloadInventory() {
           <select value={safehouseId} onChange={e => { setSafehouseId(e.target.value); setPage(1); }}
             className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean">
             <option value="">All safehouses</option>
-            {safehouses.map(s => <option key={s.safehouseId} value={s.safehouseId}>{s.name}</option>)}
+            {safehouses.map(s => <option key={String(s.safehouseId)} value={s.safehouseId}>{s.name}</option>)}
           </select>
           <select value={riskLevel} onChange={e => { setRiskLevel(e.target.value); setPage(1); }}
             className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean">
@@ -197,6 +225,7 @@ export default function CaseloadInventory() {
                   <th className="text-left px-4 py-3">Reintegration</th>
                   <th className="text-left px-4 py-3">Social worker</th>
                   <th className="text-left px-4 py-3">Admitted</th>
+                  {isAdmin && <th className="px-4 py-3"></th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
@@ -227,6 +256,16 @@ export default function CaseloadInventory() {
                     <td className="px-4 py-3 text-gray-500 text-xs">
                       {new Date(r.dateOfAdmission).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
+                    {isAdmin && (
+                      <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={() => setDeleteId(r.residentId)}
+                          className="text-xs text-red-400 hover:text-red-600"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -286,7 +325,7 @@ export default function CaseloadInventory() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Case control no. *</label>
-                  <input required value={addForm.caseControlNo} onChange={e => setAddForm(f => ({ ...f, caseControlNo: e.target.value }))}
+                  <input required maxLength={5} value={addForm.caseControlNo} onChange={e => setAddForm(f => ({ ...f, caseControlNo: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean" />
                 </div>
                 <div>
@@ -353,9 +392,17 @@ export default function CaseloadInventory() {
 
               <div>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Case category *</label>
-                <input required value={addForm.caseCategory} onChange={e => setAddForm(f => ({ ...f, caseCategory: e.target.value }))}
-                  placeholder="e.g. VAWC, Neglect, Abuse"
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean" />
+                {formOptions.caseCategories.length > 0 && formOptions.caseCategories.length < 5 ? (
+                  <select required value={addForm.caseCategory} onChange={e => setAddForm(f => ({ ...f, caseCategory: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean">
+                    <option value="">Select category…</option>
+                    {formOptions.caseCategories.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                ) : (
+                  <input required value={addForm.caseCategory} onChange={e => setAddForm(f => ({ ...f, caseCategory: e.target.value }))}
+                    placeholder="e.g. VAWC, Neglect, Abuse"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean" />
+                )}
               </div>
 
               <div>
@@ -363,21 +410,38 @@ export default function CaseloadInventory() {
                 <select required value={addForm.safehouseId} onChange={e => setAddForm(f => ({ ...f, safehouseId: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean">
                   <option value="">Select safehouse…</option>
-                  {safehouses.map(s => <option key={s.safehouseId} value={s.safehouseId}>{s.name}</option>)}
+                  {safehouses.map(s => <option key={String(s.safehouseId)} value={s.safehouseId}>{s.name}</option>)}
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Referral source *</label>
-                <input required value={addForm.referralSource} onChange={e => setAddForm(f => ({ ...f, referralSource: e.target.value }))}
-                  placeholder="e.g. DSWD, Police, Hospital"
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean" />
+                {formOptions.referralSources.length > 0 ? (
+                  <select required value={addForm.referralSource} onChange={e => setAddForm(f => ({ ...f, referralSource: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean">
+                    <option value="">Select referral source…</option>
+                    {formOptions.referralSources.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                ) : (
+                  <input required value={addForm.referralSource} onChange={e => setAddForm(f => ({ ...f, referralSource: e.target.value }))}
+                    placeholder="e.g. DSWD, Police, Hospital"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean" />
+                )}
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Assigned social worker</label>
-                <input value={addForm.assignedSocialWorker} onChange={e => setAddForm(f => ({ ...f, assignedSocialWorker: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean" />
+                {formOptions.socialWorkers.length > 0 ? (
+                  <select value={addForm.assignedSocialWorker} onChange={e => setAddForm(f => ({ ...f, assignedSocialWorker: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean">
+                    <option value="">Select social worker…</option>
+                    {formOptions.socialWorkers.map(w => <option key={w} value={w}>{w}</option>)}
+                  </select>
+                ) : (
+                  <input value={addForm.assignedSocialWorker} onChange={e => setAddForm(f => ({ ...f, assignedSocialWorker: e.target.value }))}
+                    maxLength={5} placeholder="e.g. SW001"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean" />
+                )}
               </div>
 
               <div className="flex gap-3 pt-2 pb-4">

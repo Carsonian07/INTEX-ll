@@ -122,7 +122,7 @@ CREATE TABLE dbo.residents(
   ,case_status              VARCHAR(11) NOT NULL
   ,sex                      VARCHAR(1) NOT NULL
   ,date_of_birth            DATE  NOT NULL
-  ,birth_status             VARCHAR(11) NOT NULL
+  ,birth_status             VARCHAR(20) NOT NULL
   ,place_of_birth           VARCHAR(14) NOT NULL
   ,religion                 VARCHAR(21) NOT NULL
   ,case_category            VARCHAR(11) NOT NULL
