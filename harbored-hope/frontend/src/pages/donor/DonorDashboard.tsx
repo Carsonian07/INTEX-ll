@@ -225,6 +225,7 @@ export default function DonorDashboard() {
   // Impact estimates derived from total donated (fetched once donations load)
   const [impactMonths, setImpactMonths] = useState<number | null>(null);
   const [impactGirls, setImpactGirls]   = useState<number | null>(null);
+  const [programBreakdown, setProgramBreakdown] = useState<Record<string, number> | null>(null);
 
   useEffect(() => {
     if (loading || totalGiven <= 0) return;
@@ -233,6 +234,7 @@ export default function DonorDashboard() {
         const months = json.projected_resident_months ?? 0;
         setImpactMonths(Math.round(months * 10) / 10);
         setImpactGirls(Math.max(1, Math.round(months / 3)));
+        if (json.program_breakdown) setProgramBreakdown(json.program_breakdown);
       })
       .catch(() => { /* non-critical */ });
   }, [loading, totalGiven]);
@@ -390,6 +392,38 @@ export default function DonorDashboard() {
               </p>
             </div>
           </div>
+
+          {/* Program allocation breakdown */}
+          {programBreakdown && (() => {
+            const total = Object.values(programBreakdown).reduce((s, v) => s + v, 0);
+            const colors = ['bg-hh-gold', 'bg-hh-ocean', 'bg-blue-400', 'bg-emerald-400', 'bg-purple-400', 'bg-rose-400'];
+            return (
+              <div className="mb-5 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-3">How your donation is allocated</p>
+                {/* Stacked bar */}
+                <div className="flex rounded-full overflow-hidden h-2.5 mb-4">
+                  {Object.entries(programBreakdown).map(([key, val], i) => (
+                    <div
+                      key={key}
+                      className={colors[i % colors.length]}
+                      style={{ width: `${(val / total) * 100}%` }}
+                    />
+                  ))}
+                </div>
+                {/* Legend rows */}
+                <div className="space-y-2">
+                  {Object.entries(programBreakdown).map(([key, val], i) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${colors[i % colors.length]}`} />
+                      <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{key}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 w-10 text-right">{((val / total) * 100).toFixed(1)}%</span>
+                      <span className="text-sm font-medium text-hh-navy dark:text-white w-20 text-right">₱{val.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* History table */}
           <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden">
