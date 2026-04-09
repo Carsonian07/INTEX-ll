@@ -277,18 +277,23 @@ namespace HarboredHope.API.Controllers
                 }
             }
 
+            // supporter_id is not an IDENTITY column — must assign manually
+            var nextId = (await _db.Supporters.MaxAsync(s => (int?)s.SupporterId) ?? 0) + 1;
+
             var supporter = new Supporter
             {
-                SupporterType = TrimTo("Individual", 19),
-                DisplayName = TrimTo(string.IsNullOrWhiteSpace(displayName) ? (user.Email ?? "Donor") : displayName, 17),
-                FirstName = TrimTo(displayName?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(), 6),
-                RelationshipType = TrimTo("Donor", 19),
-                Region = TrimTo("Unknown", 8),
-                Country = TrimTo("USA", 11),
-                Email = TrimTo(user.Email ?? "unknown@local", 37),
-                Phone = TrimTo("Unknown", 17),
-                Status = TrimTo("Active", 8),
-                AcquisitionChannel = TrimTo("Direct", 15),
+                SupporterId = nextId,
+                SupporterType = TrimTo("Individual", 50),
+                DisplayName = TrimTo(string.IsNullOrWhiteSpace(displayName) ? (user.Email ?? "Donor") : displayName, 200),
+                FirstName = TrimTo(displayName?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(), 100),
+                LastName = TrimTo(displayName?.Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault(), 100),
+                RelationshipType = TrimTo("Donor", 50),
+                Region = null,
+                Country = null,
+                Email = TrimTo(user.Email ?? "unknown@local", 200),
+                Phone = null,
+                Status = TrimTo("Active", 20),
+                AcquisitionChannel = TrimTo("Direct", 50),
                 CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
             };
 
