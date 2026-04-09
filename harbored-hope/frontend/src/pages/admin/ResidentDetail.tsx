@@ -316,7 +316,7 @@ export default function ResidentDetail() {
             // mean = 25 (0.25), 75th percentile = 29 (0.29) — above 29 is elevated risk
             const displayScore   = riskData.risk_score * 100;
             const highRiskScore  = riskData.risk_score > 0.25;
-            const highStruggling = riskData.struggling_flag === 1;
+            const highStruggling = riskData.struggling_probability > 0.5;
             const agree          = highRiskScore === highStruggling;
             const bothNegative   = highRiskScore && highStruggling;
             const bothPositive   = !highRiskScore && !highStruggling;
@@ -400,17 +400,17 @@ export default function ResidentDetail() {
                     />
                     <div
                       className="absolute top-[-2px] h-[18px] w-0.5 bg-gray-500 dark:bg-gray-300"
-                      style={{ left: `${riskData.cls_threshold * 100}%` }}
-                      title={`Threshold: ${(riskData.cls_threshold * 100).toFixed(0)}%`}
+                      style={{ left: '50%' }}
+                      title="Threshold: 50%"
                     />
                   </div>
                   <div className="flex justify-between text-[10px] text-gray-400 mt-1 mb-2">
                     <span>0%</span>
-                    <span>Threshold: {(riskData.cls_threshold * 100).toFixed(0)}%</span>
+                    <span>Threshold: 50%</span>
                     <span>100%</span>
                   </div>
                   <p className="text-xs text-gray-400">
-                    Probability that this resident falls in the top 25% worst outcomes compared to all residents. The model flags anyone above {(riskData.cls_threshold * 100).toFixed(0)}% as struggling.
+                    Probability that this resident falls in the top 25% worst outcomes compared to all residents. We only flag as “above threshold” when struggling probability is greater than 50%.
                   </p>
                 </div>
 
@@ -437,11 +437,11 @@ export default function ResidentDetail() {
                                        'text-amber-700 dark:text-amber-300'
                       }`}>
                         {bothNegative &&
-                          'Both the risk score (above 25 — 75th percentile) and struggling probability indicate this resident is experiencing poor outcomes. Consider reviewing their intervention plan and increasing support.'}
+                          'Both the risk score (above 29 — 75th percentile) and struggling probability indicate this resident is experiencing poor outcomes. Consider reviewing their intervention plan and increasing support.'}
                         {bothPositive &&
                           'Both model signals agree this resident is tracking well. Risk score is below the population mean and outcomes across all five dimensions appear within a healthy range compared to peers.'}
                         {!agree &&
-                          `The two model signals disagree — the risk score is ${highRiskScore ? 'above the 75th percentile (25)' : 'within normal range'} but the struggling probability is ${highStruggling ? 'above' : 'below'} threshold. These measures capture different aspects of recovery; review both alongside the social worker's assessment before drawing conclusions.`}
+                          `The two model signals disagree — the risk score is ${highRiskScore ? 'above the 75th percentile (29)' : 'within normal range'} but the struggling probability is ${highStruggling ? 'above' : 'below'} threshold. These measures capture different aspects of recovery; review both alongside the social worker's assessment before drawing conclusions.`}
                       </p>
                     </div>
                   </div>

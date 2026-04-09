@@ -375,12 +375,27 @@ export interface SafehouseOverviewItem {
   occupancyPct: number;
 }
 
+export interface ReintegrationOutcome {
+  reintegrationStatus: string;
+  reintegrationType: string | null;
+  count: number;
+}
+
+export interface SafehousePerformance {
+  safehouseId: number;
+  safehouseName: string;
+  avgEducation: number;
+  avgHealth: number;
+  totalIncidents: number;
+  avgActiveResidents: number;
+}
+
 export interface Reports {
   donationTrends: { year: number; month: number; total: number; count: number }[];
   educationTrends: { year: number; month: number; avgProgress: number }[];
   healthTrends: { year: number; month: number; avgHealth: number; avgNutrition: number }[];
-  reintegrationOutcomes: unknown[];
-  safehousePerformance: unknown[];
+  reintegrationOutcomes: ReintegrationOutcome[];
+  safehousePerformance: SafehousePerformance[];
 }
 
 export interface PaginatedResponse<T> {
