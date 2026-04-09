@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api, AdminUser } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const VALID_ROLES = ['Admin', 'Staff', 'Donor'] as const;
 
@@ -26,12 +27,13 @@ export default function UsersPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleDelete = async (userId: string) => {
-    setSaving(userId);
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setSaving(deleteId);
     setError(null);
     try {
-      await api.admin.users.delete(userId);
-      setUsers(prev => prev.filter(u => u.id !== userId));
+      await api.admin.users.delete(deleteId);
+      setUsers(prev => prev.filter(u => u.id !== deleteId));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to delete user');
     } finally {
@@ -123,15 +125,7 @@ export default function UsersPage() {
                     </td>
                     <td className="px-4 py-3">
                       {!isSelf && (
-                        deleteId === u.id ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">Delete?</span>
-                            <button onClick={() => handleDelete(u.id)} disabled={isBusy} className="text-xs text-red-600 hover:text-red-800 font-medium disabled:opacity-50">Yes</button>
-                            <button onClick={() => setDeleteId(null)} className="text-xs text-gray-400 hover:text-gray-600">No</button>
-                          </div>
-                        ) : (
-                          <button onClick={() => setDeleteId(u.id)} className="text-xs text-red-400 hover:text-red-600">Delete</button>
-                        )
+                        <button onClick={() => setDeleteId(u.id)} className="text-xs text-red-400 hover:text-red-600">Delete</button>
                       )}
                     </td>
                   </tr>
@@ -141,6 +135,16 @@ export default function UsersPage() {
           </table>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        title="Delete user account?"
+        message="This will permanently remove the user account. This action cannot be undone."
+        confirmLabel="Delete permanently"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteId(null)}
+        danger
+      />
     </div>
   );
 }

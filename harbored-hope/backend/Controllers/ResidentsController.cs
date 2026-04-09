@@ -11,6 +11,9 @@ namespace HarboredHope.API.Controllers;
 [Authorize]
 public class ResidentsController(AppDbContext db) : ControllerBase
 {
+    private const int CaseControlNoDigits = 4;
+    private const string CaseControlNoPrefix = "C";
+
     // ── GET /api/residents ────────────────────────────────────────────────────
     [HttpGet]
     [Authorize(Roles = "Admin,Staff")]
@@ -73,6 +76,27 @@ public class ResidentsController(AppDbContext db) : ControllerBase
         return Ok(new { total, page, pageSize, data = residents });
     }
 
+    // ── GET /api/residents/next-case-control-no ───────────────────────────────
+    [HttpGet("next-case-control-no")]
+    [Authorize(Roles = "Admin,Staff")]
+    public async Task<IActionResult> GetNextCaseControlNo()
+    {
+        var caseNumbers = await db.Residents
+            .AsNoTracking()
+            .Select(r => r.CaseControlNo)
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .ToListAsync();
+
+        var nextCaseControlNo = FormatCaseControlNo(caseNumbers
+            .Select(TryParseCaseControlNo)
+            .Where(v => v.HasValue)
+            .Select(v => v!.Value)
+            .DefaultIfEmpty(0)
+            .Max() + 1);
+
+        return Ok(new { caseControlNo = nextCaseControlNo });
+    }
+
     // ── GET /api/residents/{id} ───────────────────────────────────────────────
     [HttpGet("{id:int}")]
     [Authorize(Roles = "Admin,Staff")]
@@ -97,6 +121,20 @@ public class ResidentsController(AppDbContext db) : ControllerBase
         // Sanitize free-text fields
         resident.SessionNarrative_Sanitize();
 
+        resident.CaseControlNo = await ResolveNextCaseControlNoAsync(resident.CaseControlNo);
+
+        // DB column birth_status is VARCHAR(11); truncate to avoid truncation error
+        if (resident.BirthStatus?.Length > 11)
+            resident.BirthStatus = resident.BirthStatus[..11];
+
+        // DB column case_control_no is VARCHAR(5); truncate to avoid truncation error
+        if (resident.CaseControlNo?.Length > 5)
+            resident.CaseControlNo = resident.CaseControlNo[..5];
+
+        // DB column assigned_social_worker is VARCHAR(5); truncate to avoid truncation error
+        if (resident.AssignedSocialWorker?.Length > 5)
+            resident.AssignedSocialWorker = resident.AssignedSocialWorker[..5];
+
         // Default all optional string fields that the actual DB has as NOT NULL
         resident.AgeUponAdmission      ??= "";
         resident.InitialCaseAssessment ??= "";
@@ -108,6 +146,10 @@ public class ResidentsController(AppDbContext db) : ControllerBase
         resident.AssignedSocialWorker  ??= "";
         resident.ReintegrationType     ??= "";
         resident.ReintegrationStatus   ??= "";
+
+        // DB column date_enrolled is NOT NULL; default to date of admission
+        if (resident.DateEnrolled == default)
+            resident.DateEnrolled = resident.DateOfAdmission;
 
         // Calculate present age from DateOfBirth
         if (resident.PresentAge is null)
@@ -154,6 +196,10 @@ public class ResidentsController(AppDbContext db) : ControllerBase
         var existing = await db.Residents.FindAsync(id);
         if (existing is null) return NotFound();
 
+        // DB column birth_status is VARCHAR(11); truncate to avoid truncation error
+        if (updated.BirthStatus?.Length > 11)
+            updated.BirthStatus = updated.BirthStatus[..11];
+
         // Copy updatable fields (never overwrite PK or CreatedAt)
         updated.ResidentId = id;
         updated.CreatedAt  = existing.CreatedAt;
@@ -161,6 +207,28 @@ public class ResidentsController(AppDbContext db) : ControllerBase
 
         await db.SaveChangesAsync();
         return NoContent();
+    }
+
+    // ── GET /api/residents/form-options ──────────────────────────────────────
+    // Returns distinct values for free-text fields so the UI can render a
+    // dropdown when the cardinality is low (< 5 unique values).
+    [HttpGet("form-options")]
+    [Authorize(Roles = "Admin,Staff")]
+    public async Task<IActionResult> GetFormOptions()
+    {
+        var categories      = await db.Residents.Select(r => r.CaseCategory).Distinct().OrderBy(v => v).ToListAsync();
+        var referralSources = await db.Residents.Select(r => r.ReferralSource).Distinct().OrderBy(v => v).ToListAsync();
+        var socialWorkers   = await db.Residents
+            .Where(r => r.AssignedSocialWorker != null && r.AssignedSocialWorker != "")
+            .Select(r => r.AssignedSocialWorker!)
+            .Distinct().OrderBy(v => v).ToListAsync();
+
+        return Ok(new
+        {
+            caseCategories   = categories,
+            referralSources  = referralSources,
+            socialWorkers    = socialWorkers
+        });
     }
 
     // ── GET /api/residents/schema-check ──────────────────────────────────────
@@ -302,6 +370,53 @@ public class ResidentsController(AppDbContext db) : ControllerBase
         await db.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetInterventionPlans), new { id }, plan);
+    }
+
+    private async Task<string> ResolveNextCaseControlNoAsync(string? requestedCaseControlNo)
+    {
+        if (!string.IsNullOrWhiteSpace(requestedCaseControlNo))
+        {
+            var parsed = TryParseCaseControlNo(requestedCaseControlNo);
+            if (parsed.HasValue)
+                return FormatCaseControlNo(parsed.Value);
+
+            var maxLength = CaseControlNoPrefix.Length + CaseControlNoDigits;
+            return requestedCaseControlNo.Length > maxLength
+                ? requestedCaseControlNo[..maxLength]
+                : requestedCaseControlNo;
+        }
+
+        var caseNumbers = await db.Residents
+            .AsNoTracking()
+            .Select(r => r.CaseControlNo)
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .ToListAsync();
+
+        var nextValue = caseNumbers
+            .Select(TryParseCaseControlNo)
+            .Where(v => v.HasValue)
+            .Select(v => v!.Value)
+            .DefaultIfEmpty(0)
+            .Max() + 1;
+
+        return FormatCaseControlNo(nextValue);
+    }
+
+    private static int? TryParseCaseControlNo(string? caseControlNo)
+    {
+        if (string.IsNullOrWhiteSpace(caseControlNo))
+            return null;
+
+        var normalized = caseControlNo.Trim();
+        if (normalized.StartsWith(CaseControlNoPrefix, StringComparison.OrdinalIgnoreCase))
+            normalized = normalized[CaseControlNoPrefix.Length..];
+
+        return int.TryParse(normalized, out var parsed) ? parsed : null;
+    }
+
+    private static string FormatCaseControlNo(int value)
+    {
+        return $"{CaseControlNoPrefix}{value.ToString($"D{CaseControlNoDigits}")}";
     }
 }
 

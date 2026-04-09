@@ -87,6 +87,8 @@ export const api = {
     update: (id: number, data: Partial<Resident>) =>
       request('/api/residents/' + id, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request(`/api/residents/${id}`, { method: 'DELETE' }),
+    nextCaseControlNo: () => request<{ caseControlNo: string }>('/api/residents/next-case-control-no'),
+    formOptions: () => request<{ caseCategories: string[]; referralSources: string[]; socialWorkers: string[] }>('/api/residents/form-options'),
     processRecordings: {
       list:   (id: number) => request<ProcessRecording[]>(`/api/residents/${id}/process-recordings`),
       create: (id: number, data: Partial<ProcessRecording>) =>
