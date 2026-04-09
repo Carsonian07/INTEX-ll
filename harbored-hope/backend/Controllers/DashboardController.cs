@@ -67,7 +67,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
             reintegrationRate,
             avgEducationProgress     = avgEducation,
             avgHealthScore           = avgHealth,
-            totalRaisedUsd           = Math.Round(totalMonetary / 56, 0), // rough PHP→USD
+            totalRaisedUsd           = Math.Round(totalMonetaryPhp / 56, 0),
             counselingImprovementRate
         });
     }
