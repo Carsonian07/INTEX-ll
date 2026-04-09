@@ -200,7 +200,7 @@ public class ProcessRecording
     public bool ConcernsFlagged { get; set; }
     public bool ReferralMade { get; set; }
 
-    [ForeignKey("ResidentId")] public Resident Resident { get; set; } = null!;
+    [ForeignKey("ResidentId")] public Resident? Resident { get; set; }
 }
 
 // ─── HomeVisitations ──────────────────────────────────────────────────────────
@@ -221,7 +221,7 @@ public class HomeVisitation
     public string? FollowUpNotes { get; set; }
     [MaxLength(30)] public string VisitOutcome { get; set; } = "";
 
-    [ForeignKey("ResidentId")] public Resident Resident { get; set; } = null!;
+    [ForeignKey("ResidentId")] public Resident? Resident { get; set; }
 }
 
 // ─── EducationRecords ─────────────────────────────────────────────────────────
@@ -238,7 +238,7 @@ public class EducationRecord
     [MaxLength(20)] public string CompletionStatus { get; set; } = "";
     public string? Notes { get; set; }
 
-    [ForeignKey("ResidentId")] public Resident Resident { get; set; } = null!;
+    [ForeignKey("ResidentId")] public Resident? Resident { get; set; }
 }
 
 // ─── HealthWellbeingRecords ───────────────────────────────────────────────────
@@ -258,7 +258,7 @@ public class HealthWellbeingRecord
     public bool DentalCheckupDone { get; set; }
     public bool PsychologicalCheckupDone { get; set; }
 
-    [ForeignKey("ResidentId")] public Resident Resident { get; set; } = null!;
+    [ForeignKey("ResidentId")] public Resident? Resident { get; set; }
 }
 
 // ─── InterventionPlans ────────────────────────────────────────────────────────
@@ -276,7 +276,7 @@ public class InterventionPlan
     public string? CreatedAt { get; set; }
     public string? UpdatedAt { get; set; }
 
-    [ForeignKey("ResidentId")] public Resident Resident { get; set; } = null!;
+    [ForeignKey("ResidentId")] public Resident? Resident { get; set; }
 }
 
 // ─── IncidentReports ──────────────────────────────────────────────────────────
@@ -295,8 +295,8 @@ public class IncidentReport
     [MaxLength(200)] public string ReportedBy { get; set; } = "";
     public bool FollowUpRequired { get; set; }
 
-    [ForeignKey("ResidentId")] public Resident Resident { get; set; } = null!;
-    [ForeignKey("SafehouseId")] public Safehouse Safehouse { get; set; } = null!;
+    [ForeignKey("ResidentId")] public Resident? Resident { get; set; }
+    [ForeignKey("SafehouseId")] public Safehouse? Safehouse { get; set; }
 }
 
 // ─── SocialMediaPosts ─────────────────────────────────────────────────────────
@@ -331,7 +331,7 @@ public class SocialMediaPost
     public int Shares { get; set; }
     public int Saves { get; set; }
     public int ClickThroughs { get; set; }
-    public decimal? VideoViews { get; set; }
+    [Column(TypeName = "decimal(18,0)")] public decimal? VideoViews { get; set; }
     [Column(TypeName = "decimal(6,4)")] public decimal EngagementRate { get; set; }
     public int ProfileVisits { get; set; }
     public int DonationReferrals { get; set; }

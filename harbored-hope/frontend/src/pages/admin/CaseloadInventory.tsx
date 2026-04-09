@@ -1,8 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { api, ResidentListItem, Safehouse } from '../../lib/api';
-import { useAuth } from '../../context/AuthContext';
-import ConfirmDialog from '../../components/ConfirmDialog';
 
 const RISK_COLORS: Record<string, string> = {
   Low:      'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
@@ -18,13 +16,12 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function CaseloadInventory() {
-  const { isAdmin } = useAuth();
+  const navigate = useNavigate();
   const [residents, setResidents] = useState<ResidentListItem[]>([]);
   const [safehouses, setSafehouses] = useState<Safehouse[]>([]);
   const [total, setTotal]     = useState(0);
   const [page, setPage]       = useState(1);
   const [loading, setLoading] = useState(true);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
 
   // Filters
   const [search, setSearch]         = useState('');
@@ -58,13 +55,6 @@ export default function CaseloadInventory() {
   useEffect(() => {
     api.safehouses.list('Active').then(setSafehouses).catch(() => {});
   }, []);
-
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    await api.residents.delete(deleteId);
-    setDeleteId(null);
-    loadResidents();
-  };
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -132,16 +122,17 @@ export default function CaseloadInventory() {
                   <th className="text-left px-4 py-3">Reintegration</th>
                   <th className="text-left px-4 py-3">Social worker</th>
                   <th className="text-left px-4 py-3">Admitted</th>
-                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                 {residents.map(r => (
-                  <tr key={r.residentId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                  <tr
+                    key={r.residentId}
+                    onClick={() => navigate(`/admin/residents/${r.residentId}`)}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer"
+                  >
                     <td className="px-4 py-3 font-medium text-hh-navy dark:text-white">
-                      <Link to={`/admin/residents/${r.residentId}`} className="hover:underline">
-                        {r.caseControlNo}
-                      </Link>
+                      {r.caseControlNo}
                       <div className="text-xs text-gray-400">{r.internalCode}</div>
                     </td>
                     <td className="px-4 py-3">
@@ -160,16 +151,6 @@ export default function CaseloadInventory() {
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-32 truncate">{r.assignedSocialWorker ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
                       {new Date(r.dateOfAdmission).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Link to={`/admin/residents/${r.residentId}`}
-                          className="text-xs text-hh-ocean hover:underline">View</Link>
-                        {isAdmin && (
-                          <button onClick={() => setDeleteId(r.residentId)}
-                            className="text-xs text-red-400 hover:text-red-600">Delete</button>
-                        )}
-                      </div>
                     </td>
                   </tr>
                 ))}
@@ -198,15 +179,6 @@ export default function CaseloadInventory() {
         )}
       </div>
 
-      <ConfirmDialog
-        open={deleteId !== null}
-        title="Delete resident record?"
-        message="This will permanently remove the resident and all associated records. This action cannot be undone."
-        confirmLabel="Delete permanently"
-        onConfirm={handleDelete}
-        onCancel={() => setDeleteId(null)}
-        danger
-      />
     </div>
   );
 }
