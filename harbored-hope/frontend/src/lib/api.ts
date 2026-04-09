@@ -32,7 +32,10 @@ async function request<T>(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Request failed' }));
-    throw new Error(err.message ?? `HTTP ${res.status}`);
+    const message = err.message
+      ?? (Array.isArray(err.errors) ? err.errors.join(' ') : null)
+      ?? `HTTP ${res.status}`;
+    throw new Error(message);
   }
 
   if (res.status === 204) return undefined as T;
@@ -350,6 +353,7 @@ export interface PublicStats {
   avgEducationProgress: number;
   avgHealthScore: number;
   totalRaisedUsd: number;
+  counselingImprovementRate: number;
 }
 
 export interface AdminStats {
@@ -372,12 +376,27 @@ export interface SafehouseOverviewItem {
   occupancyPct: number;
 }
 
+export interface ReintegrationOutcome {
+  reintegrationStatus: string;
+  reintegrationType: string | null;
+  count: number;
+}
+
+export interface SafehousePerformance {
+  safehouseId: number;
+  safehouseName: string;
+  avgEducation: number;
+  avgHealth: number;
+  totalIncidents: number;
+  avgActiveResidents: number;
+}
+
 export interface Reports {
   donationTrends: { year: number; month: number; total: number; count: number }[];
   educationTrends: { year: number; month: number; avgProgress: number }[];
   healthTrends: { year: number; month: number; avgHealth: number; avgNutrition: number }[];
-  reintegrationOutcomes: unknown[];
-  safehousePerformance: unknown[];
+  reintegrationOutcomes: ReintegrationOutcome[];
+  safehousePerformance: SafehousePerformance[];
 }
 
 export interface PaginatedResponse<T> {

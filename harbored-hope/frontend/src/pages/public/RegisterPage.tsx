@@ -43,11 +43,12 @@ export default function RegisterPage() {
     if (/[a-z]/.test(password)) score++;
     if (/\d/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
+    if (new Set(password).size >= 6) score++;
     return score;
   })();
 
-  const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Very strong'][strength];
-  const strengthColor = ['', 'bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-green-400', 'bg-green-500'][strength];
+  const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Very strong', 'Very strong'][strength];
+  const strengthColor = ['', 'bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-green-400', 'bg-green-500', 'bg-green-500'][strength];
 
   return (
     <div className="min-h-screen bg-hh-navy-light dark:bg-gray-950 flex items-center justify-center px-4 py-12">
@@ -109,6 +110,7 @@ export default function RegisterPage() {
                   { label: 'One lowercase letter (a–z)',    met: /[a-z]/.test(password) },
                   { label: 'One number (0–9)',              met: /\d/.test(password) },
                   { label: 'One special character (!@#…)',  met: /[^A-Za-z0-9]/.test(password) },
+                  { label: 'At least 6 unique characters',  met: new Set(password).size >= 6 },
                 ].map(({ label, met }) => (
                   <li key={label} className="flex items-center gap-1.5 text-xs">
                     <span className={met ? 'text-green-500' : 'text-gray-300 dark:text-gray-600'}>
@@ -123,7 +125,7 @@ export default function RegisterPage() {
               {password.length > 0 && (
                 <div className="mt-2">
                   <div className="flex gap-1 mb-1">
-                    {[1,2,3,4,5].map(i => (
+                    {[1,2,3,4,5,6].map(i => (
                       <div key={i} className={`h-1 flex-1 rounded-full ${i <= strength ? strengthColor : 'bg-gray-200 dark:bg-gray-700'}`} />
                     ))}
                   </div>

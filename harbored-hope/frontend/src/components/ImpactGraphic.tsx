@@ -72,8 +72,9 @@ export default function ImpactGraphic({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="w-full max-w-2xl mx-auto my-6 flex flex-col gap-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm">
+      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="w-full max-w-2xl flex flex-col gap-4">
         {/* ── Shareable card (captured by html2canvas) ── */}
         <div
           ref={cardRef}
@@ -243,6 +244,7 @@ export default function ImpactGraphic({
         >
           Close and return to dashboard
         </button>
+      </div>
       </div>
     </div>
   );
