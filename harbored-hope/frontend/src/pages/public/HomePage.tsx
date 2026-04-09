@@ -1,6 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, PublicStats } from '../../lib/api';
 
 // Each pair: [leftImage, rightImage] with per-image bg-position
 // Left images: face toward the right of the panel (near center box)
@@ -113,12 +112,6 @@ function HeroCarousel() {
 }
 
 export default function HomePage() {
-  const [stats, setStats] = useState<PublicStats | null>(null);
-
-  useEffect(() => {
-    api.dashboard.public().then(setStats).catch(() => {});
-  }, []);
-
   return (
     <div>
       {/* Hero carousel */}
@@ -128,10 +121,10 @@ export default function HomePage() {
       <section className="bg-hh-navy">
         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 divide-x divide-white/10">
           {[
-            { value: stats ? stats.totalGirlsServed.toLocaleString() : '—', label: 'Girls served' },
-            { value: stats ? stats.activeSafehouses.toString() : '—', label: 'Active safehouses' },
-            { value: stats ? `${stats.reintegrationRate}%` : '—', label: 'Reintegration rate' },
-            { value: stats ? `$${Math.round(stats.totalRaisedUsd / 1000)}K` : '—', label: 'Raised this year' },
+            { value: '80%', label: 'Filipino children vulnerable to abuse online' },
+            { value: '7 Million+', label: 'Children sexually abused every year in the Philippines' },
+            { value: '33%', label: 'Of sexual abuse cases involve incest in the Philippines' },
+            { value: '2 in 3', label: 'Child victims do not report abuse due to lack of sex education' },
           ].map(s => (
             <div key={s.label} className="py-5 px-6 text-center">
               <div className="text-2xl font-semibold text-hh-gold">{s.value}</div>
@@ -143,8 +136,8 @@ export default function HomePage() {
 
       {/* How your donation helps */}
       <section className="max-w-5xl mx-auto px-4 py-16">
-        <h2 className="font-serif text-2xl font-medium text-hh-navy dark:text-white mb-2">How your donation helps</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Every contribution directly supports girls across our safehouses</p>
+        <h2 className="font-serif text-2xl font-medium text-hh-navy dark:text-white mb-2">These are not just statistics. These are children. And this must end now.</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Your donations directly support girls across our safehouses</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {[
             {
@@ -186,51 +179,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Impact this month */}
-      <section className="bg-hh-navy-light dark:bg-gray-900 py-12 px-4">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="font-serif text-2xl font-medium text-hh-navy dark:text-white mb-2">Impact this month</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Real outcomes across all safehouses</p>
-          <div className="space-y-4 max-w-2xl">
-            {[
-              { label: 'Education progress', value: stats?.avgEducationProgress ?? 82, color: 'bg-hh-navy' },
-              { label: 'Average health score', value: stats ? Math.round(stats.avgHealthScore / 5 * 100) : 74, color: 'bg-hh-ocean' },
-              { label: 'Counseling sessions', value: 91, color: 'bg-hh-gold' },
-            ].map(bar => (
-              <div key={bar.label} className="flex items-center gap-4">
-                <span className="text-sm text-gray-600 dark:text-gray-300 w-40 shrink-0">{bar.label}</span>
-                <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div className={`h-full ${bar.color} rounded-full`} style={{ width: `${bar.value}%` }} />
-                </div>
-                <span className="text-sm font-medium text-hh-navy dark:text-white w-10 text-right">{Math.round(bar.value)}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Donate CTA */}
       <section className="bg-hh-navy-dark py-16 px-4 text-center">
         <h2 className="font-serif text-3xl font-medium text-white mb-3">Be someone's safe harbor</h2>
         <p className="text-sm text-white/70 max-w-md mx-auto mb-8 leading-relaxed">
-          Choose a monthly amount to directly fund shelter, healing, and education for girls in need.
+          Help directly fund shelter, healing, and education for girls in need.
         </p>
-        <div className="flex flex-wrap gap-3 justify-center mb-6">
-          {['$10', '$25', '$50', 'Custom'].map((amt, i) => (
-            <button
-              key={amt}
-              className={`px-5 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
-                i === 1
-                  ? 'bg-hh-gold/20 border-hh-gold text-hh-gold'
-                  : 'border-hh-gold/40 text-hh-gold hover:border-hh-gold'
-              }`}
-            >
-              {amt}
-            </button>
-          ))}
-        </div>
+
         <Link to="/register" className="inline-block bg-hh-gold text-white font-medium px-8 py-3 rounded-lg hover:bg-yellow-600 transition-colors">
-          Donate monthly
+          Donate
         </Link>
       </section>
     </div>

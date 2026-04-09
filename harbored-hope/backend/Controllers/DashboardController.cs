@@ -25,22 +25,26 @@ public class DashboardController(AppDbContext db) : ControllerBase
             ? Math.Round((double)reintegrated / totalResidents * 100, 1)
             : 0;
 
-        var latestMetrics = await db.SafehouseMonthlyMetrics
-            .OrderByDescending(m => m.MonthStart)
-            .Take(7)
-            .ToListAsync();
-
-        var avgEducation = latestMetrics.Any(m => m.AvgEducationProgress.HasValue)
-            ? Math.Round(latestMetrics.Where(m => m.AvgEducationProgress.HasValue).Average(m => (double)m.AvgEducationProgress!.Value), 1)
+        var avgEducation = await db.EducationRecords.AnyAsync()
+            ? Math.Round(await db.EducationRecords.AverageAsync(e => (double)e.ProgressPercent), 1)
             : 0;
 
-        var avgHealth = latestMetrics.Any(m => m.AvgHealthScore.HasValue)
-            ? Math.Round(latestMetrics.Where(m => m.AvgHealthScore.HasValue).Average(m => (double)m.AvgHealthScore!.Value), 2)
+        var avgHealth = await db.HealthWellbeingRecords.AnyAsync(h => h.GeneralHealthScore.HasValue)
+            ? Math.Round(await db.HealthWellbeingRecords
+                .Where(h => h.GeneralHealthScore.HasValue)
+                .AverageAsync(h => (double)h.GeneralHealthScore!.Value), 2)
             : 0;
 
         var totalMonetary = await db.Donations
             .Where(d => d.DonationType == "Monetary" && d.Amount.HasValue)
             .SumAsync(d => d.Amount!.Value);
+
+        var totalSessions = await db.ProcessRecordings.CountAsync();
+        var sessionsWithImprovement = await db.ProcessRecordings
+            .CountAsync(r => r.ProgressNoted);
+        var counselingImprovementRate = totalSessions > 0
+            ? Math.Round((double)sessionsWithImprovement / totalSessions * 100, 1)
+            : 0;
 
         return Ok(new
         {
@@ -48,9 +52,10 @@ public class DashboardController(AppDbContext db) : ControllerBase
             activeResidents,
             activeSafehouses,
             reintegrationRate,
-            avgEducationProgress = avgEducation,
-            avgHealthScore       = avgHealth,
-            totalRaisedUsd       = Math.Round(totalMonetary / 56, 0) // rough PHP→USD
+            avgEducationProgress     = avgEducation,
+            avgHealthScore           = avgHealth,
+            totalRaisedUsd           = Math.Round(totalMonetary / 56, 0), // rough PHP→USD
+            counselingImprovementRate
         });
     }
 
