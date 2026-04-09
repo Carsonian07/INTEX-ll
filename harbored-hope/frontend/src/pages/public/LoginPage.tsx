@@ -105,33 +105,35 @@ export default function LoginPage() {
               </button>
             </form>
           ) : (
-            <form onSubmit={handleMfa} className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Authentication code</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={6}
-                  required
-                  autoFocus
-                  value={mfaCode}
-                  onChange={e => setMfaCode(e.target.value.replace(/\D/g, ''))}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean focus:border-transparent tracking-widest text-center text-lg"
-                  placeholder="000000"
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={loading || mfaCode.length !== 6}
-                className="w-full bg-hh-navy text-white font-medium py-2.5 rounded-lg hover:bg-hh-navy-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed text-sm"
-              >
-                {loading ? 'Verifying…' : 'Verify'}
-              </button>
+            <div className="space-y-5">
+              <form onSubmit={handleMfa} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Authentication code</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    required
+                    autoFocus
+                    value={mfaCode}
+                    onChange={e => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                    className="w-full px-3.5 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean focus:border-transparent tracking-widest text-center text-lg"
+                    placeholder="000000"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading || mfaCode.length !== 6}
+                  className="w-full bg-hh-navy text-white font-medium py-2.5 rounded-lg hover:bg-hh-navy-dark transition-colors disabled:opacity-60 disabled:cursor-not-allowed text-sm"
+                >
+                  {loading ? 'Verifying…' : 'Verify'}
+                </button>
+              </form>
               <button type="button" onClick={() => { setUserId(null); setMfaCode(''); setError(''); }} className="w-full text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
                 ← Back to sign in
               </button>
-            </form>
+            </div>
           )}
         </div>
 

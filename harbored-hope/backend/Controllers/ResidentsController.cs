@@ -97,9 +97,49 @@ public class ResidentsController(AppDbContext db) : ControllerBase
         // Sanitize free-text fields
         resident.SessionNarrative_Sanitize();
 
+        // Default all optional string fields that the actual DB has as NOT NULL
+        resident.AgeUponAdmission      ??= "";
+        resident.InitialCaseAssessment ??= "";
+        resident.PlaceOfBirth          ??= "";
+        resident.Religion              ??= "";
+        resident.PwdType               ??= "";
+        resident.SpecialNeedsDiagnosis ??= "";
+        resident.ReferringAgencyPerson ??= "";
+        resident.AssignedSocialWorker  ??= "";
+        resident.ReintegrationType     ??= "";
+        resident.ReintegrationStatus   ??= "";
+
+        // Calculate present age from DateOfBirth
+        if (resident.PresentAge is null)
+        {
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            var age = today.Year - resident.DateOfBirth.Year;
+            if (resident.DateOfBirth > today.AddYears(-age)) age--;
+            resident.PresentAge = age.ToString();
+        }
+
+        // Calculate length of stay in days from DateOfAdmission
+        if (resident.LengthOfStay is null)
+        {
+            var today2 = DateOnly.FromDateTime(DateTime.Today);
+            var days = today2.DayNumber - resident.DateOfAdmission.DayNumber;
+            resident.LengthOfStay = days.ToString();
+        }
+
+        // The DB resident_id column lacks IDENTITY, so assign the next ID manually
+        var maxId = await db.Residents.MaxAsync(r => (int?)r.ResidentId) ?? 0;
+        resident.ResidentId = maxId + 1;
+
         resident.CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
         db.Residents.Add(resident);
-        await db.SaveChangesAsync();
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+        {
+            return BadRequest(new { message = ex.InnerException?.Message ?? ex.Message });
+        }
 
         return CreatedAtAction(nameof(GetById), new { id = resident.ResidentId }, resident);
     }
@@ -121,6 +161,40 @@ public class ResidentsController(AppDbContext db) : ControllerBase
 
         await db.SaveChangesAsync();
         return NoContent();
+    }
+
+    // ── GET /api/residents/schema-check ──────────────────────────────────────
+    // Temporary diagnostic: returns all NOT NULL columns in the residents table
+    [HttpGet("schema-check")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> SchemaCheck()
+    {
+        var connection = db.Database.GetDbConnection();
+        var shouldClose = connection.State != System.Data.ConnectionState.Open;
+        if (shouldClose) await connection.OpenAsync();
+        try
+        {
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_NAME = 'residents'
+                ORDER BY ORDINAL_POSITION";
+            await using var reader = await cmd.ExecuteReaderAsync();
+            var cols = new List<object>();
+            while (await reader.ReadAsync())
+                cols.Add(new {
+                    column    = reader.GetString(0),
+                    type      = reader.GetString(1),
+                    nullable  = reader.GetString(2),
+                    maxLength = reader.IsDBNull(3) ? (int?)null : reader.GetInt32(3)
+                });
+            return Ok(cols);
+        }
+        finally
+        {
+            if (shouldClose) await connection.CloseAsync();
+        }
     }
 
     // ── DELETE /api/residents/{id} ────────────────────────────────────────────

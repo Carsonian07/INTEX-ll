@@ -119,7 +119,8 @@ public class DonationAllocation
 // ─── Residents ────────────────────────────────────────────────────────────────
 public class Resident
 {
-    [Key] public int ResidentId { get; set; }
+    [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
+    public int ResidentId { get; set; }
     [MaxLength(20)] public string CaseControlNo { get; set; } = "";
     [MaxLength(50)] public string InternalCode { get; set; } = "";
     public int SafehouseId { get; set; }
@@ -159,6 +160,8 @@ public class Resident
     // Admission
     public DateOnly DateOfAdmission { get; set; }
     [MaxLength(100)] public string? AgeUponAdmission { get; set; }
+    [MaxLength(100)] public string? PresentAge { get; set; }
+    [MaxLength(100)] public string? LengthOfStay { get; set; }
     [MaxLength(50)] public string ReferralSource { get; set; } = "";
     [MaxLength(200)] public string? ReferringAgencyPerson { get; set; }
     [MaxLength(200)] public string? AssignedSocialWorker { get; set; }
