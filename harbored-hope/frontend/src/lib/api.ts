@@ -21,10 +21,12 @@ async function request<T>(
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if (res.status === 401) {
-    // Token expired — clear and redirect to login
-    localStorage.removeItem('hh_token');
-    localStorage.removeItem('hh_user');
-    window.location.href = '/login';
+    if (!path.startsWith('/api/auth/login')) {
+      // Token expired — clear and redirect to login
+      localStorage.removeItem('hh_token');
+      localStorage.removeItem('hh_user');
+      window.location.href = '/login';
+    }
     throw new Error('Unauthorized');
   }
 
@@ -374,12 +376,27 @@ export interface SafehouseOverviewItem {
   occupancyPct: number;
 }
 
+export interface ReintegrationOutcome {
+  reintegrationStatus: string;
+  reintegrationType: string | null;
+  count: number;
+}
+
+export interface SafehousePerformance {
+  safehouseId: number;
+  safehouseName: string;
+  avgEducation: number;
+  avgHealth: number;
+  totalIncidents: number;
+  avgActiveResidents: number;
+}
+
 export interface Reports {
   donationTrends: { year: number; month: number; total: number; count: number }[];
   educationTrends: { year: number; month: number; avgProgress: number }[];
   healthTrends: { year: number; month: number; avgHealth: number; avgNutrition: number }[];
-  reintegrationOutcomes: unknown[];
-  safehousePerformance: unknown[];
+  reintegrationOutcomes: ReintegrationOutcome[];
+  safehousePerformance: SafehousePerformance[];
 }
 
 export interface PaginatedResponse<T> {

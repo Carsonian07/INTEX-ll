@@ -128,7 +128,7 @@ export default function LoginPage() {
               >
                 {loading ? 'Verifying…' : 'Verify'}
               </button>
-              <button type="button" onClick={() => { setUserId(null); setMfaCode(''); }} className="w-full text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+              <button type="button" onClick={() => { setUserId(null); setMfaCode(''); setError(''); }} className="w-full text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
                 ← Back to sign in
               </button>
             </form>

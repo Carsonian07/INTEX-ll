@@ -9,6 +9,14 @@ namespace HarboredHope.API.Controllers;
 [Route("api/dashboard")]
 public class DashboardController(AppDbContext db) : ControllerBase
 {
+    private const decimal UsdToPhp = 56m;
+    private static readonly DateOnly AprilCutoff = new(2026, 4, 1);
+
+    // Reports historically treated stored donation Amount as PHP.
+    // New donations (April 2026+) are being entered in USD, so convert those to PHP for reporting.
+    private static decimal NormalizeDonationPhp(decimal amount, DateOnly donationDate)
+        => donationDate >= AprilCutoff ? amount * UsdToPhp : amount;
+
     // ── GET /api/dashboard/public ─────────────────────────────────────────────
     // Unauthenticated — only aggregated, anonymized data
     [HttpGet("public")]
@@ -35,9 +43,14 @@ public class DashboardController(AppDbContext db) : ControllerBase
                 .AverageAsync(h => (double)h.GeneralHealthScore!.Value), 2)
             : 0;
 
-        var totalMonetary = await db.Donations
+        // EF can't translate our "April cutoff" normalization; pull raw values and compute in-memory.
+        var monetaryRows = await db.Donations
+            .AsNoTracking()
             .Where(d => d.DonationType == "Monetary" && d.Amount.HasValue)
-            .SumAsync(d => d.Amount!.Value);
+            .Select(d => new { d.Amount, d.DonationDate })
+            .ToListAsync();
+
+        var totalMonetaryPhp = monetaryRows.Sum(r => NormalizeDonationPhp(r.Amount!.Value, r.DonationDate));
 
         var totalSessions = await db.ProcessRecordings.CountAsync();
         var sessionsWithImprovement = await db.ProcessRecordings
@@ -71,7 +84,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
         var criticalRisk        = await db.Residents.CountAsync(r => r.CurrentRiskLevel == "Critical" && r.CaseStatus == "Active");
         var highRisk            = await db.Residents.CountAsync(r => r.CurrentRiskLevel == "High" && r.CaseStatus == "Active");
         var recentDonationCount = await db.Donations.CountAsync(d => d.DonationDate >= monthStart);
-        var recentDonationValue = await db.Donations
+        var recentDonationValueUsd = await db.Donations
             .Where(d => d.DonationType == "Monetary" && d.DonationDate >= monthStart && d.Amount.HasValue)
             .SumAsync(d => d.Amount!.Value);
 
@@ -126,7 +139,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
             criticalRisk,
             highRisk,
             recentDonationCount,
-            recentDonationValue,
+            recentDonationValue = Math.Round(recentDonationValueUsd, 2),
             upcomingConferences,
             recentIncidents,
             safehouseOverview
@@ -142,19 +155,24 @@ public class DashboardController(AppDbContext db) : ControllerBase
     {
         var cutoff = DateOnly.FromDateTime(DateTime.Today.AddMonths(-months));
 
-        // Donation trends by month
-        var donationTrends = await db.Donations
+        // Donation trends by month (computed in-memory; see note above)
+        var donationRows = await db.Donations
+            .AsNoTracking()
             .Where(d => d.DonationType == "Monetary" && d.DonationDate >= cutoff && d.Amount.HasValue)
+            .Select(d => new { d.Amount, d.DonationDate })
+            .ToListAsync();
+
+        var donationTrends = donationRows
             .GroupBy(d => new { d.DonationDate.Year, d.DonationDate.Month })
             .Select(g => new
             {
-                year   = g.Key.Year,
-                month  = g.Key.Month,
-                total  = g.Sum(d => d.Amount!.Value),
-                count  = g.Count()
+                year  = g.Key.Year,
+                month = g.Key.Month,
+                total = g.Sum(d => NormalizeDonationPhp(d.Amount!.Value, d.DonationDate)),
+                count = g.Count()
             })
             .OrderBy(x => x.year).ThenBy(x => x.month)
-            .ToListAsync();
+            .ToList();
 
         // Education progress over time
         var educationQuery = db.EducationRecords
@@ -197,19 +215,42 @@ public class DashboardController(AppDbContext db) : ControllerBase
             .Select(g => new { g.Key.ReintegrationStatus, g.Key.ReintegrationType, count = g.Count() })
             .ToListAsync();
 
-        // Safehouse performance comparison
-        var safehousePerformance = await db.SafehouseMonthlyMetrics
+        // Safehouse performance — base metrics from monthly summaries
+        var safehouseBase = await db.SafehouseMonthlyMetrics
             .Where(m => m.MonthStart >= cutoff)
             .GroupBy(m => m.SafehouseId)
             .Select(g => new
             {
-                safehouseId       = g.Key,
-                avgEducation      = Math.Round(g.Average(m => (double)(m.AvgEducationProgress ?? 0m)), 1),
-                avgHealth         = Math.Round(g.Average(m => (double)(m.AvgHealthScore ?? 0m)), 2),
-                totalIncidents    = g.Sum(m => m.IncidentCount),
+                safehouseId        = g.Key,
+                safehouseName      = db.Safehouses.Where(s => s.SafehouseId == g.Key).Select(s => s.Name).FirstOrDefault() ?? "",
+                avgEducation       = Math.Round(g.Average(m => (double)(m.AvgEducationProgress ?? 0m)), 1),
+                totalIncidents     = g.Sum(m => m.IncidentCount),
                 avgActiveResidents = Math.Round(g.Average(m => (double)m.ActiveResidents), 1)
             })
             .ToListAsync();
+
+        // Health score computed directly from HealthWellbeingRecords (same source as healthTrends)
+        var healthBySafehouse = await db.HealthWellbeingRecords
+            .Where(h => h.RecordDate >= cutoff && h.GeneralHealthScore != null)
+            .Join(db.Residents,
+                h => h.ResidentId,
+                r => r.ResidentId,
+                (h, r) => new { r.SafehouseId, Score = (double)h.GeneralHealthScore!.Value })
+            .GroupBy(x => x.SafehouseId)
+            .Select(g => new { safehouseId = g.Key, avgHealth = Math.Round(g.Average(x => x.Score), 2) })
+            .ToListAsync();
+
+        var healthLookup = healthBySafehouse.ToDictionary(x => x.safehouseId, x => x.avgHealth);
+
+        var safehousePerformance = safehouseBase.Select(s => new
+        {
+            s.safehouseId,
+            s.safehouseName,
+            s.avgEducation,
+            avgHealth          = healthLookup.TryGetValue(s.safehouseId, out var h) ? h : 0.0,
+            s.totalIncidents,
+            s.avgActiveResidents
+        }).ToList();
 
         return Ok(new
         {

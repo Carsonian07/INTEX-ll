@@ -70,7 +70,7 @@ function HeroCarousel() {
 
       {/* Center overlay — fades edges into center */}
       <div className="absolute inset-0 z-10 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse 38% 100% at 50% 50%, rgba(18,40,80,0.72) 0%, rgba(18,40,80,0.18) 70%, transparent 100%)' }}
+        style={{ background: 'radial-gradient(ellipse 38% 100% at 50% 50%, rgba(18,40,80,0.90) 0%, rgba(18,40,80,0.18) 70%, transparent 100%)' }}
       />
 
       {/* Caption */}
