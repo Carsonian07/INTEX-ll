@@ -23,6 +23,7 @@ interface AuthState {
   login: (token: string) => Promise<void>;
   logout: () => void;
   toggleTheme: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -67,6 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.href = '/';
   };
 
+  const refreshUser = async () => {
+    const me = await api.auth.me();
+    setUser(me);
+  };
+
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light';
     setTheme(next);
@@ -82,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{
       user, token, loading,
       isAdmin, isDonor, isStaff,
-      theme, login, logout, toggleTheme
+      theme, login, logout, toggleTheme, refreshUser
     }}>
       {children}
     </AuthContext.Provider>
@@ -94,7 +100,7 @@ const loadingFallback: AuthState = {
   user: null, token: null, loading: true,
   isAdmin: false, isDonor: false, isStaff: false,
   theme: 'light',
-  login: async () => {}, logout: () => {}, toggleTheme: () => {},
+  login: async () => {}, logout: () => {}, toggleTheme: () => {}, refreshUser: async () => {},
 };
 
 export function useAuth() {

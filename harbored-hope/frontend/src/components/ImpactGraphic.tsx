@@ -72,8 +72,9 @@ export default function ImpactGraphic({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="w-full max-w-2xl mx-auto my-6 flex flex-col gap-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm">
+      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="w-full max-w-2xl flex flex-col gap-4">
         {/* ── Shareable card (captured by html2canvas) ── */}
         <div
           ref={cardRef}
@@ -99,7 +100,7 @@ export default function ImpactGraphic({
             <div className="flex items-center gap-3">
               <img
                 src="/Embrace_at_ocean_s_edge.png"
-                alt="Harbored Hope"
+                alt=""
                 className="h-14 w-14 rounded-full object-cover ring-2 ring-[#C8962E]"
                 onError={e => { (e.currentTarget as HTMLImageElement).src = '/logo.png'; }}
               />
@@ -243,6 +244,7 @@ export default function ImpactGraphic({
         >
           Close and return to dashboard
         </button>
+      </div>
       </div>
     </div>
   );

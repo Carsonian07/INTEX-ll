@@ -47,7 +47,7 @@ const navItems = [
 ];
 
 export default function AdminLayout() {
-  const { user, logout, toggleTheme, theme } = useAuth();
+  const { user, logout, isAdmin, toggleTheme, theme } = useAuth();
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950 overflow-hidden">
@@ -84,6 +84,44 @@ export default function AdminLayout() {
             </NavLink>
           ))}
 
+          {isAdmin && (
+            <div className="pt-3 mt-3 border-t border-white/10">
+              <p className="px-3 text-[10px] uppercase tracking-wider text-gray-500 mb-2">Admin only</p>
+              <NavLink
+                to="/admin/residents/new"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
+              >
+                <span className="text-base leading-none">➕</span>
+                Add resident
+              </NavLink>
+              <NavLink
+                to="/admin/users"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                    isActive
+                      ? 'bg-hh-ocean/20 text-white font-medium'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  }`
+                }
+              >
+                <span className="text-base leading-none">🔑</span>
+                User accounts
+              </NavLink>
+              <NavLink
+                to="/admin/security"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                    isActive
+                      ? 'bg-hh-ocean/20 text-white font-medium'
+                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  }`
+                }
+              >
+                <span className="text-base leading-none">🛡️</span>
+                My security
+              </NavLink>
+            </div>
+          )}
         </nav>
 
         {/* User footer */}

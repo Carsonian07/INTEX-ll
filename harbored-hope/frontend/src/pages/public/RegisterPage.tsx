@@ -18,7 +18,7 @@ export default function RegisterPage() {
     setError('');
 
     if (password !== confirm) { setError('Passwords do not match.'); return; }
-    if (password.length < 12) { setError('Password must be at least 12 characters.'); return; }
+    if (password.length < 14) { setError('Password must be at least 14 characters.'); return; }
 
     setLoading(true);
     try {
@@ -38,16 +38,17 @@ export default function RegisterPage() {
 
   const strength = (() => {
     let score = 0;
-    if (password.length >= 12) score++;
+    if (password.length >= 14) score++;
     if (/[A-Z]/.test(password)) score++;
     if (/[a-z]/.test(password)) score++;
     if (/\d/.test(password)) score++;
     if (/[^A-Za-z0-9]/.test(password)) score++;
+    if (new Set(password).size >= 6) score++;
     return score;
   })();
 
-  const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Very strong'][strength];
-  const strengthColor = ['', 'bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-green-400', 'bg-green-500'][strength];
+  const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Very strong', 'Very strong'][strength];
+  const strengthColor = ['', 'bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-green-400', 'bg-green-500', 'bg-green-500'][strength];
 
   return (
     <div className="min-h-screen bg-hh-navy-light dark:bg-gray-950 flex items-center justify-center px-4 py-12">
@@ -100,12 +101,31 @@ export default function RegisterPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 className="w-full px-3.5 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-hh-ocean"
-                placeholder="At least 12 characters"
+                placeholder="At least 14 characters"
               />
+              <ul className="mt-2 space-y-1">
+                {[
+                  { label: 'At least 14 characters',       met: password.length >= 14 },
+                  { label: 'One uppercase letter (A–Z)',    met: /[A-Z]/.test(password) },
+                  { label: 'One lowercase letter (a–z)',    met: /[a-z]/.test(password) },
+                  { label: 'One number (0–9)',              met: /\d/.test(password) },
+                  { label: 'One special character (!@#…)',  met: /[^A-Za-z0-9]/.test(password) },
+                  { label: 'At least 6 unique characters',  met: new Set(password).size >= 6 },
+                ].map(({ label, met }) => (
+                  <li key={label} className="flex items-center gap-1.5 text-xs">
+                    <span className={met ? 'text-green-500' : 'text-gray-300 dark:text-gray-600'}>
+                      {met ? '✓' : '○'}
+                    </span>
+                    <span className={met ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}>
+                      {label}
+                    </span>
+                  </li>
+                ))}
+              </ul>
               {password.length > 0 && (
                 <div className="mt-2">
                   <div className="flex gap-1 mb-1">
-                    {[1,2,3,4,5].map(i => (
+                    {[1,2,3,4,5,6].map(i => (
                       <div key={i} className={`h-1 flex-1 rounded-full ${i <= strength ? strengthColor : 'bg-gray-200 dark:bg-gray-700'}`} />
                     ))}
                   </div>

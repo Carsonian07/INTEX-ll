@@ -76,7 +76,7 @@ public class AdminController(
     }
 
     /// <summary>
-    /// Assigns a role to a user.
+    /// Assigns a role to a user (additive).
     /// POST /api/admin/users/{userId}/roles
     /// </summary>
     [HttpPost("users/{userId}/roles")]
@@ -97,6 +97,53 @@ public class AdminController(
 
         await userManager.AddToRoleAsync(user, req.Role);
         return Ok(new { message = $"Role {req.Role} assigned to {user.Email}" });
+    }
+
+    /// <summary>
+    /// Replaces all roles on a user with a single role.
+    /// PUT /api/admin/users/{userId}/role
+    /// </summary>
+    [HttpPut("users/{userId}/role")]
+    public async Task<IActionResult> SetRole(
+        string userId,
+        [FromBody] AssignRoleRequest req,
+        [FromServices] Microsoft.AspNetCore.Identity.UserManager<Data.AppUser> userManager)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        if (user is null) return NotFound();
+
+        var validRoles = new[] { "Admin", "Staff", "Donor" };
+        if (!validRoles.Contains(req.Role))
+            return BadRequest(new { message = $"Invalid role. Valid roles: {string.Join(", ", validRoles)}" });
+
+        var currentRoles = await userManager.GetRolesAsync(user);
+        await userManager.RemoveFromRolesAsync(user, currentRoles);
+        await userManager.AddToRoleAsync(user, req.Role);
+
+        return Ok(new { message = $"{user.Email} is now {req.Role}" });
+    }
+
+    /// <summary>
+    /// Deletes a user account. Cannot delete your own account.
+    /// DELETE /api/admin/users/{userId}
+    /// </summary>
+    [HttpDelete("users/{userId}")]
+    public async Task<IActionResult> DeleteUser(
+        string userId,
+        [FromServices] Microsoft.AspNetCore.Identity.UserManager<Data.AppUser> userManager)
+    {
+        var currentUserId = userManager.GetUserId(User);
+        if (userId == currentUserId)
+            return BadRequest(new { message = "You cannot delete your own account." });
+
+        var user = await userManager.FindByIdAsync(userId);
+        if (user is null) return NotFound();
+
+        var result = await userManager.DeleteAsync(user);
+        if (!result.Succeeded)
+            return StatusCode(500, new { message = "Failed to delete user." });
+
+        return Ok(new { message = $"{user.Email} has been deleted." });
     }
 
     /// <summary>

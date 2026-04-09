@@ -21,16 +21,21 @@ async function request<T>(
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if (res.status === 401) {
-    // Token expired — clear and redirect to login
-    localStorage.removeItem('hh_token');
-    localStorage.removeItem('hh_user');
-    window.location.href = '/login';
+    if (!path.startsWith('/api/auth/login')) {
+      // Token expired — clear and redirect to login
+      localStorage.removeItem('hh_token');
+      localStorage.removeItem('hh_user');
+      window.location.href = '/login';
+    }
     throw new Error('Unauthorized');
   }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Request failed' }));
-    throw new Error(err.message ?? `HTTP ${res.status}`);
+    const message = err.message
+      ?? (Array.isArray(err.errors) ? err.errors.join(' ') : null)
+      ?? `HTTP ${res.status}`;
+    throw new Error(message);
   }
 
   if (res.status === 204) return undefined as T;
@@ -144,6 +149,15 @@ export const api = {
     delete: (id: number) => request(`/api/safehouses/${id}`, { method: 'DELETE' }),
   },
 
+  admin: {
+    users: {
+      list: () => request<AdminUser[]>('/api/admin/users'),
+      setRole: (userId: string, role: string) =>
+        request(`/api/admin/users/${userId}/role`, { method: 'PUT', body: JSON.stringify({ role }) }),
+      delete: (userId: string) =>
+        request(`/api/admin/users/${userId}`, { method: 'DELETE' }),
+    },
+  },
   // ─── Social Planner ────────────────────────────────────────────────────────
   socialPlanner: {
     options: () => request<{
@@ -538,6 +552,14 @@ export interface Supporter {
   createdAt: string;
 }
 
+export interface AdminUser {
+  id: string;
+  email: string;
+  displayName: string;
+  twoFactorEnabled: boolean;
+  supporterId?: number;
+  roles: string[];
+}
 export interface DonorPrediction {
   supporterId: number;
   ltv:       { probability: number; prediction: number };
@@ -595,3 +617,4 @@ export interface ProjectedImpactResponse {
   };
   narrative?: string;
 }
+

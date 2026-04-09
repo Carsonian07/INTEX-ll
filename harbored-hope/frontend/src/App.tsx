@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { RequireAuth, RedirectIfAuthed } from './components/RouteGuards';
 
@@ -21,6 +21,8 @@ import ProcessRecordingPage from './pages/admin/ProcessRecordingPage';
 import HomeVisitationPage from './pages/admin/HomeVisitationPage';
 import DonorsPage from './pages/admin/DonorsPage';
 import ReportsPage from './pages/admin/ReportsPage';
+import UsersPage from './pages/admin/UsersPage';
+import SecurityPage from './pages/shared/SecurityPage';
 import SocialPostPlannerPage from './pages/admin/SocialPostPlannerPage';
 
 import PublicLayout from './layouts/PublicLayout';
@@ -48,6 +50,7 @@ export default function App() {
             </RequireAuth>
           }>
             <Route index element={<DonorDashboard />} />
+            <Route path="security" element={<SecurityPage />} />
           </Route>
 
           {/* Admin / Staff routes */}
@@ -63,7 +66,10 @@ export default function App() {
             <Route path="residents/:id/home-visitations" element={<HomeVisitationPage />} />
             <Route path="donors" element={<DonorsPage />} />
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="users" element={<RequireAuth role="Admin"><UsersPage /></RequireAuth>} />
             <Route path="social-planner" element={<SocialPostPlannerPage />} />
+            <Route path="users" element={<RequireAuth role="Admin"><UsersPage /></RequireAuth>} />
+            <Route path="security" element={<SecurityPage />} />
           </Route>
 
           {/* 404 */}

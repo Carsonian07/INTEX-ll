@@ -225,6 +225,7 @@ export default function DonorDashboard() {
   // Impact estimates derived from total donated (fetched once donations load)
   const [impactMonths, setImpactMonths] = useState<number | null>(null);
   const [impactGirls, setImpactGirls]   = useState<number | null>(null);
+  const [programBreakdown, setProgramBreakdown] = useState<Record<string, number> | null>(null);
 
   useEffect(() => {
     if (loading || totalGiven <= 0) return;
@@ -233,9 +234,39 @@ export default function DonorDashboard() {
         const months = json.projected_resident_months ?? 0;
         setImpactMonths(Math.round(months * 10) / 10);
         setImpactGirls(Math.max(1, Math.round(months / 3)));
+        if (json.program_breakdown) setProgramBreakdown(json.program_breakdown);
       })
       .catch(() => { /* non-critical */ });
   }, [loading, totalGiven]);
+
+  // Build pie slices outside JSX so they're reusable
+  const HEX_COLORS = ['#D4A017', '#2E86C1', '#60a5fa', '#34d399', '#c084fc', '#fb7185'];
+  const PIE_SIZE = 220;
+  const pieSlices = (() => {
+    if (!programBreakdown) return null;
+    const pieTotal = Object.values(programBreakdown).reduce((s, v) => s + v, 0);
+    const CX = PIE_SIZE / 2;
+    const CY = PIE_SIZE / 2;
+    const R  = PIE_SIZE / 2 - 6;
+    let angle = -Math.PI / 2;
+    return {
+      pieTotal,
+      slices: Object.entries(programBreakdown).map(([key, val], i) => {
+        const sweep = (val / pieTotal) * 2 * Math.PI;
+        const startAngle = angle;
+        angle += sweep;
+        const x1 = CX + R * Math.cos(startAngle);
+        const y1 = CY + R * Math.sin(startAngle);
+        const x2 = CX + R * Math.cos(angle);
+        const y2 = CY + R * Math.sin(angle);
+        return {
+          key, val,
+          color: HEX_COLORS[i % HEX_COLORS.length],
+          d: `M ${CX} ${CY} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${R} ${R} 0 ${sweep > Math.PI ? 1 : 0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`,
+        };
+      }),
+    };
+  })();
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
@@ -249,8 +280,9 @@ export default function DonorDashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:items-start">
-        {/* ── Donate form ── */}
+      {/* ── Main grid: form (left) | pie + stats (right) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:items-start mb-6">
+        {/* Donate form */}
         <div className="lg:col-span-2">
           <div className="bg-hh-navy-dark rounded-xl p-6">
             <h2 className="font-serif text-lg font-medium text-white mb-1">Make a donation</h2>
@@ -318,8 +350,9 @@ export default function DonorDashboard() {
 
               {/* Campaign */}
               <div>
-                <label className="block text-xs text-white/60 mb-2 uppercase tracking-wide">Campaign</label>
+                <label htmlFor="campaign" className="block text-xs text-white/60 mb-2 uppercase tracking-wide">Campaign</label>
                 <select
+                  id="campaign"
                   value={campaign}
                   onChange={e => setCampaign(e.target.value)}
                   className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-hh-gold"
@@ -362,10 +395,9 @@ export default function DonorDashboard() {
           </div>
         </div>
 
-        {/* ── Donation history panel ── */}
-        <div className="lg:col-span-3">
-          {/* Summary cards */}
-          <div className="grid grid-cols-2 gap-4 mb-5">
+        {/* Right column: stat cards (top) then pie chart (half width) */}
+        <div className="lg:col-span-3 flex flex-col gap-6">
+          <div className="grid grid-cols-2 gap-4">
             <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-4">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total given</p>
               <p className="text-2xl font-semibold text-hh-navy dark:text-white">
@@ -389,48 +421,79 @@ export default function DonorDashboard() {
               </p>
             </div>
           </div>
-
-          {/* History table */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-              <h2 className="font-medium text-hh-navy dark:text-white">Donation history</h2>
-            </div>
-            {loading ? (
-              <div className="flex items-center justify-center h-32">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-hh-navy" />
-              </div>
-            ) : donations.length === 0 ? (
-              <div className="text-center py-12 text-gray-400 text-sm">No donations yet.</div>
-            ) : (
-              <div className="divide-y divide-gray-50 dark:divide-gray-800 overflow-y-auto max-h-48">
-                {donations.map(d => (
-                  <div key={d.donationId} className="flex items-center justify-between px-5 py-3.5">
-                    <div>
-                      <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">
-                        {d.campaignName ?? 'General donation'}
-                        {d.isRecurring && (
-                          <span className="ml-2 text-xs bg-hh-ocean/10 text-hh-ocean px-2 py-0.5 rounded-full">
-                            Recurring
-                          </span>
-                        )}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {new Date(d.donationDate).toLocaleDateString('en-US', {
-                          month: 'long',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </p>
+          {pieSlices && (
+            <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-5">
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-4">How your donation is allocated</p>
+              <div className="flex items-center gap-4">
+                <svg
+                  width={PIE_SIZE}
+                  height={PIE_SIZE}
+                  viewBox={`0 0 ${PIE_SIZE} ${PIE_SIZE}`}
+                  className="flex-shrink-0"
+                >
+                  {pieSlices.slices.map(s => (
+                    <path key={s.key} d={s.d} fill={s.color} stroke="white" strokeWidth="2" />
+                  ))}
+                </svg>
+                <div className="space-y-2 flex-1 min-w-0">
+                  {pieSlices.slices.map(s => (
+                    <div key={s.key} className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
+                      <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">{s.key}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 w-10 text-right">
+                        {((s.val / pieSlices.pieTotal) * 100).toFixed(1)}%
+                      </span>
+                      <span className="text-sm font-medium text-hh-navy dark:text-white w-20 text-right">
+                        ${(s.val / USD_TO_PHP).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
                     </div>
-                    <span className="text-sm font-semibold text-hh-navy dark:text-white">
-                      ${d.amount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '—'}
-                    </span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
+      </div>{/* end main grid */}
+
+      {/* ── Row 3: Donation history — full width ── */}
+      <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="font-medium text-hh-navy dark:text-white">Donation history</h2>
+        </div>
+        {loading ? (
+          <div className="flex items-center justify-center h-32">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-hh-navy" />
+          </div>
+        ) : donations.length === 0 ? (
+          <div className="text-center py-12 text-gray-400 text-sm">No donations yet.</div>
+        ) : (
+          <div className="divide-y divide-gray-50 dark:divide-gray-800 overflow-y-auto max-h-80">
+            {donations.map(d => (
+              <div key={d.donationId} className="flex items-center justify-between px-5 py-3.5">
+                <div>
+                  <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">
+                    {d.campaignName ?? 'General donation'}
+                    {d.isRecurring && (
+                      <span className="ml-2 text-xs bg-hh-ocean/10 text-hh-ocean px-2 py-0.5 rounded-full">
+                        Recurring
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {new Date(d.donationDate).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                  </p>
+                </div>
+                <span className="text-sm font-semibold text-hh-navy dark:text-white">
+                  ${d.amount?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '—'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Feature 2: Pre-donation modal ── */}

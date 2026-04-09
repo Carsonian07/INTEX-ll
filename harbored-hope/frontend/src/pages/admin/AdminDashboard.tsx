@@ -55,7 +55,7 @@ export default function AdminDashboard() {
         <StatCard label="High risk" value={stats?.highRisk ?? '—'} color="text-orange-500" sub="Close monitoring needed" />
         <StatCard
           label="Donations this month"
-          value={stats ? `$${Math.round(stats.recentDonationValue / 56).toLocaleString()}` : '—'}
+          value={stats ? `$${Math.round(stats.recentDonationValue).toLocaleString()}` : '—'}
           sub={`${stats?.recentDonationCount ?? '—'} donations received`}
           color="text-hh-gold"
         />
