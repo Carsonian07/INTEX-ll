@@ -399,12 +399,17 @@ export default function SocialPostPlannerPage() {
             <h2 className="text-sm font-semibold text-hh-navy dark:text-white uppercase tracking-wide mb-1">What drives engagement</h2>
             <p className="text-xs text-gray-400 mb-4">Key findings from the explanatory model on your existing posts.</p>
 
-            {/* Placeholder rows — replace with real findings */}
+            {/* 1–4 steps (concise guidance) */}
             <div className="space-y-3">
               {[
-                { factor: 'Finding 1', detail: 'Add description here' },
-                { factor: 'Finding 2', detail: 'Add description here' },
-                { factor: 'Finding 3', detail: 'Add description here' },
+                {
+                  factor: 'Step 1',
+                  detail: 'Add a call to action (CTA) — this drives donation probability and donation amount more than anything.',
+                  emphasize: true,
+                },
+                { factor: 'Step 2', detail: 'If engagement is the goal, prioritize Instagram when the content fits the format.' },
+                { factor: 'Step 3', detail: 'Use CTA to drive growth too (be explicit about following, sharing, or signing up).' },
+                { factor: 'Step 4', detail: 'Schedule for mid‑morning or evening; time of day is key.' },
               ].map((row, i) => (
                 <div key={i} className="flex items-start gap-3 py-2.5 border-b border-gray-50 dark:border-gray-800 last:border-0">
                   <div className="w-5 h-5 rounded-full bg-hh-ocean/10 text-hh-ocean flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
@@ -412,14 +417,16 @@ export default function SocialPostPlannerPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{row.factor}</p>
-                    <p className="text-xs text-gray-400">{row.detail}</p>
+                    <p className={`text-xs text-gray-400 ${'emphasize' in row && row.emphasize ? 'font-semibold text-gray-700 dark:text-gray-200' : ''}`}>
+                      {row.detail}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
 
-            <p className="text-[10px] text-gray-300 dark:text-gray-600 mt-3 italic">
-              Replace placeholder rows above with findings from your explanatory model analysis.
+            <p className="text-[10px] text-gray-400 mt-3">
+              These are global guidance highlights. Run predictions above to evaluate a specific draft post.
             </p>
           </div>
 
