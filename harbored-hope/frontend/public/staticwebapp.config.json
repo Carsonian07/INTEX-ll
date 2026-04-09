@@ -13,7 +13,13 @@
   ],
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/*.png", "/*.ico", "/*.svg"]
+    "exclude": ["/assets/*", "/*.js", "/*.mjs", "/*.css", "/*.wasm", "/*.png", "/*.ico", "/*.svg", "/*.woff2"]
+  },
+  "mimeTypes": {
+    ".js": "application/javascript",
+    ".mjs": "application/javascript",
+    ".css": "text/css",
+    ".wasm": "application/wasm"
   },
   "responseOverrides": {
     "404": {
