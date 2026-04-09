@@ -318,8 +318,9 @@ export default function DonorDashboard() {
 
               {/* Campaign */}
               <div>
-                <label className="block text-xs text-white/60 mb-2 uppercase tracking-wide">Campaign</label>
+                <label htmlFor="campaign" className="block text-xs text-white/60 mb-2 uppercase tracking-wide">Campaign</label>
                 <select
+                  id="campaign"
                   value={campaign}
                   onChange={e => setCampaign(e.target.value)}
                   className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-hh-gold"

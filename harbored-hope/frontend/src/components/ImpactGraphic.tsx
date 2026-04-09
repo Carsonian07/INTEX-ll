@@ -99,7 +99,7 @@ export default function ImpactGraphic({
             <div className="flex items-center gap-3">
               <img
                 src="/Embrace_at_ocean_s_edge.png"
-                alt="Harbored Hope"
+                alt=""
                 className="h-14 w-14 rounded-full object-cover ring-2 ring-[#C8962E]"
                 onError={e => { (e.currentTarget as HTMLImageElement).src = '/logo.png'; }}
               />
