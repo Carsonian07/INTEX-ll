@@ -1,19 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/staticwebapp.config.json",
-  "routes": [
-    {
-      "route": "/api/*",
-      "allowedRoles": ["anonymous"]
-    },
-    {
-      "route": "/*",
-      "serve": "/index.html",
-      "statusCode": 200
-    }
-  ],
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/assets/*", "/*.js", "/*.mjs", "/*.css", "/*.wasm", "/*.png", "/*.ico", "/*.svg", "/*.woff2"]
+    "exclude": ["/assets/**", "/*.js", "/*.mjs", "/*.css", "/*.wasm", "/*.png", "/*.ico", "/*.svg", "/*.woff2"]
   },
   "mimeTypes": {
     ".js": "application/javascript",
