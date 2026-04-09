@@ -103,7 +103,7 @@ export default function PublicLayout() {
               <p className="text-sm text-gray-400 leading-relaxed">Providing safe homes and rehabilitation for girls who have survived trafficking and abuse in the Philippines.</p>
             </div>
             <div>
-              <h4 className="text-sm font-medium text-gray-300 mb-3 uppercase tracking-wider">Organization</h4>
+              <h2 className="text-sm font-medium text-gray-300 mb-3 uppercase tracking-wider">Organization</h2>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li><Link to="/impact" className="hover:text-white transition-colors">Our impact</Link></li>
                 <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy policy</Link></li>
@@ -111,7 +111,7 @@ export default function PublicLayout() {
               </ul>
             </div>
             <div>
-              <h4 className="text-sm font-medium text-gray-300 mb-3 uppercase tracking-wider">Account</h4>
+              <h2 className="text-sm font-medium text-gray-300 mb-3 uppercase tracking-wider">Account</h2>
               <ul className="space-y-2 text-sm text-gray-400">
                 <li><Link to="/login" className="hover:text-white transition-colors">Log in</Link></li>
                 <li><Link to="/register" className="hover:text-white transition-colors">Create account</Link></li>

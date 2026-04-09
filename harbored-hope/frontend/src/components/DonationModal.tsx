@@ -138,7 +138,7 @@ export default function DonationModal({
         <div className="bg-[#1B2A4A] rounded-t-2xl px-6 py-5 flex items-center gap-4 sticky top-0 z-10">
           <img
             src="/Embrace_at_ocean_s_edge.png"
-            alt="Harbored Hope"
+            alt=""
             className="h-11 w-11 rounded-full object-cover ring-2 ring-[#C8962E]"
             onError={e => { (e.currentTarget as HTMLImageElement).src = '/logo.png'; }}
           />
