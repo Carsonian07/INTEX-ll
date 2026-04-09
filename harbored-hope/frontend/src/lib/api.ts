@@ -353,6 +353,7 @@ export interface PublicStats {
   avgEducationProgress: number;
   avgHealthScore: number;
   totalRaisedUsd: number;
+  counselingImprovementRate: number;
 }
 
 export interface AdminStats {
