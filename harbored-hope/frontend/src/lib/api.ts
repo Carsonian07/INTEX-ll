@@ -21,10 +21,12 @@ async function request<T>(
   const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
 
   if (res.status === 401) {
-    // Token expired — clear and redirect to login
-    localStorage.removeItem('hh_token');
-    localStorage.removeItem('hh_user');
-    window.location.href = '/login';
+    if (!path.startsWith('/api/auth/login')) {
+      // Token expired — clear and redirect to login
+      localStorage.removeItem('hh_token');
+      localStorage.removeItem('hh_user');
+      window.location.href = '/login';
+    }
     throw new Error('Unauthorized');
   }
 
