@@ -45,19 +45,23 @@ public class Partner
 public class Supporter
 {
     [Key] public int SupporterId { get; set; }
-    [Required, MaxLength(50)] public string SupporterType { get; set; } = "";
+    /// <summary>Optional (e.g. self-service signup only collects name + email).</summary>
+    [MaxLength(50)] public string? SupporterType { get; set; }
     [Required, MaxLength(200)] public string DisplayName { get; set; } = "";
     [MaxLength(200)] public string? OrganizationName { get; set; }
     [MaxLength(100)] public string? FirstName { get; set; }
     [MaxLength(100)] public string? LastName { get; set; }
-    [MaxLength(50)] public string RelationshipType { get; set; } = "";
+    /// <summary>Optional when not collected at signup.</summary>
+    [MaxLength(50)] public string? RelationshipType { get; set; }
     [MaxLength(100)] public string? Region { get; set; }
     [MaxLength(100)] public string? Country { get; set; }
     [MaxLength(200)] public string? Email { get; set; }
     [MaxLength(50)] public string? Phone { get; set; }
-    [MaxLength(20)] public string Status { get; set; } = "Active";
+    /// <summary>Optional when not collected at signup.</summary>
+    [MaxLength(20)] public string? Status { get; set; }
     public DateOnly? FirstDonationDate { get; set; }
     [MaxLength(50)] public string? AcquisitionChannel { get; set; }
+    /// <summary>Stored as nvarchar in many deployments (CSV / legacy); keep string to match SQL.</summary>
     public string? CreatedAt { get; set; }
 
     public ICollection<Donation> Donations { get; set; } = [];

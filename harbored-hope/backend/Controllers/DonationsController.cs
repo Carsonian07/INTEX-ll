@@ -1,6 +1,5 @@
 using HarboredHope.API.Data;
 using HarboredHope.API.Models;
-using System.IdentityModel.Tokens.Jwt;
 using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -28,8 +27,11 @@ public class DonationsController(AppDbContext db, UserManager<AppUser> userManag
             .Include(d => d.Supporter)
             .AsQueryable();
 
-        // Donors can only see their own donations
-        if (User.IsInRole("Donor"))
+        // Scope to the signed-in supporter for everyone except Admin/Staff (who manage all records).
+        // Do not rely on User.IsInRole("Donor") alone: JWT role claims can be missing/mis-mapped, and
+        // the frontend may allow /donor for accounts whose roles are not yet assigned — without this,
+        // those requests would return the full org-wide donation list.
+        if (!IsAdminOrStaff())
         {
             var sid = await ResolveDonorSupporterIdAsync();
             if (sid is null)
@@ -80,8 +82,7 @@ public class DonationsController(AppDbContext db, UserManager<AppUser> userManag
 
         if (donation is null) return NotFound();
 
-        // Donors can only view their own
-        if (User.IsInRole("Donor"))
+        if (!IsAdminOrStaff())
         {
             var sid = await ResolveDonorSupporterIdAsync();
             if (sid is null || donation.SupporterId != sid.Value)
@@ -100,16 +101,16 @@ public class DonationsController(AppDbContext db, UserManager<AppUser> userManag
 
         int supporterId;
 
-        if (User.IsInRole("Donor"))
+        if (IsAdminOrStaff())
+        {
+            supporterId = req.SupporterId;
+        }
+        else
         {
             var sid = await ResolveDonorSupporterIdAsync();
             if (sid is null)
                 return Forbid();
             supporterId = sid.Value;
-        }
-        else
-        {
-            supporterId = req.SupporterId;
         }
 
         var donation = new Donation
@@ -207,12 +208,13 @@ public class DonationsController(AppDbContext db, UserManager<AppUser> userManag
         return NoContent();
     }
 
+    private bool IsAdminOrStaff() =>
+        User.IsInRole("Admin") || User.IsInRole("Staff");
+
     private async Task<int?> ResolveDonorSupporterIdAsync()
     {
-        var supporterIdClaim = User.FindFirst("supporterId")?.Value;
-        if (int.TryParse(supporterIdClaim, out var sid))
-            return sid;
-
+        // Use the identity user's SupporterId only — never trust the JWT supporterId claim alone,
+        // and never merge an existing supporter row by email (that caused wrong donation totals).
         var user = await ResolveCurrentUserAsync();
         if (user == null)
             return null;
@@ -220,33 +222,26 @@ public class DonationsController(AppDbContext db, UserManager<AppUser> userManag
         if (user.SupporterId.HasValue)
             return user.SupporterId.Value;
 
-        Supporter? supporter = null;
-        if (!string.IsNullOrWhiteSpace(user.Email))
+        var supporter = new Supporter
         {
-            supporter = await db.Supporters.FirstOrDefaultAsync(s => s.Email == user.Email);
-        }
+            SupporterType = null,
+            DisplayName = TrimTo(user.DisplayName ?? user.Email ?? "Donor", 200) ?? "Donor",
+            FirstName = null,
+            LastName = null,
+            RelationshipType = null,
+            Region = null,
+            Country = null,
+            Email = string.IsNullOrWhiteSpace(user.Email) ? null : TrimTo(user.Email, 200),
+            Phone = null,
+            Status = null,
+            // Legacy/Azure schemas often keep acquisition_channel NOT NULL — match SeedData ("Direct").
+            AcquisitionChannel = "Direct",
+            CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
+        };
 
-        if (supporter == null)
-        {
-            supporter = new Supporter
-            {
-                SupporterType = TrimTo("Individual", 19),
-                DisplayName = TrimTo(user.DisplayName ?? user.Email ?? "Donor", 17),
-                FirstName = TrimTo(user.DisplayName?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(), 6),
-                RelationshipType = TrimTo("Donor", 19),
-                Region = TrimTo("Unknown", 8),
-                Country = TrimTo("USA", 11),
-                Email = TrimTo(user.Email ?? "unknown@local", 37),
-                Phone = TrimTo("Unknown", 17),
-                Status = TrimTo("Active", 8),
-                AcquisitionChannel = TrimTo("Direct", 15),
-                CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
-            };
-
-            await AssignManualKeyIfNeededAsync("supporters", "supporter_id", id => supporter.SupporterId = id);
-            db.Supporters.Add(supporter);
-            await db.SaveChangesAsync();
-        }
+        await AssignManualKeyIfNeededAsync("supporters", "supporter_id", id => supporter.SupporterId = id);
+        db.Supporters.Add(supporter);
+        await db.SaveChangesAsync();
 
         user.SupporterId = supporter.SupporterId;
         await userManager.UpdateAsync(user);
@@ -261,7 +256,7 @@ public class DonationsController(AppDbContext db, UserManager<AppUser> userManag
 
         var userId =
             User.FindFirstValue(ClaimTypes.NameIdentifier) ??
-            User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub);
 
         if (!string.IsNullOrWhiteSpace(userId))
         {
@@ -272,7 +267,7 @@ public class DonationsController(AppDbContext db, UserManager<AppUser> userManag
 
         var email =
             User.FindFirstValue(ClaimTypes.Email) ??
-            User.FindFirstValue(JwtRegisteredClaimNames.Email);
+            User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Email);
 
         if (!string.IsNullOrWhiteSpace(email))
             return await userManager.FindByEmailAsync(email);

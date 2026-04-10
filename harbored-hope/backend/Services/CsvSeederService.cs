@@ -136,17 +136,17 @@ public class CsvSeederService(AppDbContext db, ILogger<CsvSeederService> logger)
         {
             db.Supporters.Add(new Supporter
             {
-                SupporterType     = r.supporter_type ?? "",
+                SupporterType     = string.IsNullOrWhiteSpace(r.supporter_type) ? null : r.supporter_type,
                 DisplayName       = r.display_name ?? "",
                 OrganizationName  = r.organization_name,
                 FirstName         = r.first_name,
                 LastName          = r.last_name,
-                RelationshipType  = r.relationship_type ?? "",
+                RelationshipType  = string.IsNullOrWhiteSpace(r.relationship_type) ? null : r.relationship_type,
                 Region            = r.region,
                 Country           = r.country,
                 Email             = r.email,
                 Phone             = r.phone,
-                Status            = r.status ?? "Active",
+                Status            = string.IsNullOrWhiteSpace(r.status) ? null : r.status,
                 FirstDonationDate = ParseDateNullable(r.first_donation_date),
                 AcquisitionChannel = r.acquisition_channel,
                 CreatedAt         = ParseDateTime(r.created_at)

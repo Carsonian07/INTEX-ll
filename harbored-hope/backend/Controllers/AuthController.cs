@@ -178,11 +178,6 @@ namespace HarboredHope.API.Controllers
                 supporter = await _db.Supporters.FirstOrDefaultAsync(s => s.SupporterId == user.SupporterId.Value);
             }
 
-            if (supporter == null && !string.IsNullOrWhiteSpace(user.Email))
-            {
-                supporter = await _db.Supporters.FirstOrDefaultAsync(s => s.Email == user.Email);
-            }
-
             if (supporter == null)
                 return NoContent();
 
@@ -268,37 +263,23 @@ namespace HarboredHope.API.Controllers
 
         private async Task<Supporter?> EnsureSupporterForDonorAsync(AppUser user, string? displayName)
         {
-            if (!string.IsNullOrWhiteSpace(user.Email))
-            {
-                var existing = await _db.Supporters.FirstOrDefaultAsync(s => s.Email == user.Email);
-                if (existing != null)
-                {
-                    if (user.SupporterId != existing.SupporterId)
-                    {
-                        user.SupporterId = existing.SupporterId;
-                        await _userManager.UpdateAsync(user);
-                    }
-                    return existing;
-                }
-            }
-
-            // supporter_id is not an IDENTITY column — must assign manually
+            // Always create a dedicated supporter row for a new account (never merge by email).
             var nextId = (await _db.Supporters.MaxAsync(s => (int?)s.SupporterId) ?? 0) + 1;
 
             var supporter = new Supporter
             {
                 SupporterId = nextId,
-                SupporterType = TrimTo("Individual", 50),
-                DisplayName = TrimTo(string.IsNullOrWhiteSpace(displayName) ? (user.Email ?? "Donor") : displayName, 200),
-                FirstName = TrimTo(displayName?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(), 100),
-                LastName = TrimTo(displayName?.Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault(), 100),
-                RelationshipType = TrimTo("Donor", 50),
+                SupporterType = null,
+                DisplayName = TrimTo(string.IsNullOrWhiteSpace(displayName) ? (user.Email ?? "Donor") : displayName, 200) ?? "Donor",
+                FirstName = null,
+                LastName = null,
+                RelationshipType = null,
                 Region = null,
                 Country = null,
-                Email = TrimTo(user.Email ?? "unknown@local", 200),
+                Email = string.IsNullOrWhiteSpace(user.Email) ? null : TrimTo(user.Email, 200),
                 Phone = null,
-                Status = TrimTo("Active", 20),
-                AcquisitionChannel = TrimTo("Direct", 50),
+                Status = null,
+                AcquisitionChannel = "Direct",
                 CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
             };
 

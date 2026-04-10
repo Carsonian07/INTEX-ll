@@ -1,9 +1,11 @@
+using System.Security.Claims;
 using System.Text;
 using HarboredHope.API.Data;
 using HarboredHope.API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,7 +18,12 @@ var identityCs = builder.Configuration.GetConnectionString("IdentityDb")
 
 // Separate migration history tables so both contexts can share one Azure SQL database.
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(operationalCs, sql => sql.MigrationsHistoryTable("__EFMigrationsHistory_Operational")));
+{
+    options.UseSqlServer(operationalCs, sql => sql.MigrationsHistoryTable("__EFMigrationsHistory_Operational"));
+    // Snapshot uses PascalCase table names from InitialCreate; runtime model applies snake_case in OnModelCreating.
+    // EF 9 treats that as "pending changes" unless a full baseline migration is added — ignore so MigrateAsync can run.
+    options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
+});
 
 builder.Services.AddDbContext<AuthDbContext>(options =>
     options.UseSqlServer(identityCs, sql => sql.MigrationsHistoryTable("__EFMigrationsHistory_Auth")));
@@ -66,8 +73,12 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer              = builder.Configuration["Jwt:Issuer"],
         ValidAudience            = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-        ClockSkew                = TimeSpan.Zero
+        ClockSkew                = TimeSpan.Zero,
+        // Ensures User.IsInRole(...) matches role claims emitted as ClaimTypes.Role in TokenService.
+        RoleClaimType              = ClaimTypes.Role,
     };
+    // Map short JWT claim names (e.g. "role") to ClaimTypes.* so authorization sees roles consistently.
+    options.MapInboundClaims = true;
 });
 
 builder.Services.AddAuthorization(options =>
@@ -136,6 +147,9 @@ await using (var scope = app.Services.CreateAsyncScope())
     var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
     await authDb.Database.MigrateAsync();
 
+    // Operational DB: do not MigrateAsync() on startup — Azure SQL table/casing differed from scripted ALTERs
+    // and blocked the API. Apply schema with: dotnet ef database update --context AppDbContext
+    // (or run the manual ALTER in the SupporterNullableSignupFields migration comment).
 }
 
 // ─── HTTPS / HSTS ─────────────────────────────────────────────────────────────

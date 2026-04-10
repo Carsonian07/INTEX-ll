@@ -26,8 +26,8 @@
 
     <!-- JWT Authentication -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.2" />
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.3.2" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.4.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.4.0" />
 
     <!-- Swagger -->
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
