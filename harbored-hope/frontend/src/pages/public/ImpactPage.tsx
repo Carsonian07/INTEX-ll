@@ -68,7 +68,7 @@ export default function ImpactPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
             <MetricCard label="Girls served" value={stats?.totalGirlsServed.toLocaleString() ?? '—'} desc="Since founding" />
             <MetricCard label="Active safehouses" value={stats?.activeSafehouses.toString() ?? '—'} desc="Operating today" />
-            <MetricCard label="Reintegration rate" value={stats ? `${stats.reintegrationRate}%` : '—'} desc="Returned safely" />
+            <MetricCard label="Reintegration rate" value={stats ? `${stats.reintegrationRate}%` : '—'} desc="Closed vs. terminated cases" />
             <MetricCard label="Raised this year" value={stats ? `$${Math.round(stats.totalRaisedUsd / 1000)}K` : '—'} desc="USD equivalent" />
           </div>
         )}

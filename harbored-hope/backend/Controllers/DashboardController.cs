@@ -26,11 +26,11 @@ public class DashboardController(AppDbContext db) : ControllerBase
         var totalGirlsServed  = await db.Residents.CountAsync();
         var activeResidents   = await db.Residents.CountAsync(r => r.CaseStatus == "Active");
         var activeSafehouses  = await db.Safehouses.CountAsync(s => s.Status == "Active");
-        var reintegrated      = await db.Residents.CountAsync(r => r.ReintegrationStatus == "Completed");
-        var totalResidents    = await db.Residents.CountAsync(r =>
-            r.ReintegrationStatus != null && r.ReintegrationStatus != "Not Started");
-        var reintegrationRate = totalResidents > 0
-            ? Math.Round((double)reintegrated / totalResidents * 100, 1)
+        var closedCases     = await db.Residents.CountAsync(r => r.CaseStatus == "Closed");
+        var terminatedCases = await db.Residents.CountAsync(r => r.CaseStatus == "Terminated");
+        var closedPlusTerminated = closedCases + terminatedCases;
+        var reintegrationRate = closedPlusTerminated > 0
+            ? Math.Round((double)closedCases / closedPlusTerminated * 100, 1)
             : 0;
 
         var avgEducation = await db.EducationRecords.AnyAsync()
@@ -44,9 +44,10 @@ public class DashboardController(AppDbContext db) : ControllerBase
             : 0;
 
         // EF can't translate our "April cutoff" normalization; pull raw values and compute in-memory.
+        var currentYear = DateTime.Today.Year;
         var monetaryRows = await db.Donations
             .AsNoTracking()
-            .Where(d => d.DonationType == "Monetary" && d.Amount.HasValue)
+            .Where(d => d.DonationType == "Monetary" && d.Amount.HasValue && d.DonationDate.Year == currentYear)
             .Select(d => new { d.Amount, d.DonationDate })
             .ToListAsync();
 
