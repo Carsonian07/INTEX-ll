@@ -54,6 +54,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 if (prop.ClrType == typeof(bool))
                     prop.SetValueConverter(boolConverter);
 
+        // supporter_id is not an IDENTITY column — EF must include it in INSERTs
+        modelBuilder.Entity<Supporter>()
+            .Property(s => s.SupporterId)
+            .ValueGeneratedNever();
+
         modelBuilder.Entity<Safehouse>(e =>
         {
             e.HasIndex(s => s.SafehouseCode).IsUnique();

@@ -124,10 +124,27 @@ namespace HarboredHope.API.Controllers
             if (!result.Succeeded)
                 return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
 
-            var supporter = await EnsureSupporterForDonorAsync(user, req.DisplayName);
-            if (!await _roleManager.RoleExistsAsync("Donor"))
-                await _roleManager.CreateAsync(new IdentityRole("Donor"));
-            await _userManager.AddToRoleAsync(user, "Donor");
+            try
+            {
+                await EnsureSupporterForDonorAsync(user, req.DisplayName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "EnsureSupporterForDonorAsync failed for {Email}", req.Email);
+                return StatusCode(500, new { message = ex.InnerException?.Message ?? ex.Message });
+            }
+
+            try
+            {
+                if (!await _roleManager.RoleExistsAsync("Donor"))
+                    await _roleManager.CreateAsync(new IdentityRole("Donor"));
+                await _userManager.AddToRoleAsync(user, "Donor");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Role assignment failed for {Email}", req.Email);
+                return StatusCode(500, new { message = $"Role assignment failed: {ex.Message}" });
+            }
 
             var token = await _tokenService.GenerateTokenAsync(user);
             var roles = await _userManager.GetRolesAsync(user);
@@ -269,16 +286,16 @@ namespace HarboredHope.API.Controllers
             var supporter = new Supporter
             {
                 SupporterId = nextId,
-                SupporterType = null,
+                SupporterType = "Individual",
                 DisplayName = TrimTo(string.IsNullOrWhiteSpace(displayName) ? (user.Email ?? "Donor") : displayName, 200) ?? "Donor",
-                FirstName = null,
-                LastName = null,
-                RelationshipType = null,
-                Region = null,
-                Country = null,
-                Email = string.IsNullOrWhiteSpace(user.Email) ? null : TrimTo(user.Email, 200),
-                Phone = null,
-                Status = null,
+                FirstName = TrimTo(displayName?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "", 100),
+                LastName = TrimTo(displayName?.Split(' ', StringSplitOptions.RemoveEmptyEntries).Skip(1).LastOrDefault() ?? "", 100),
+                RelationshipType = "Donor",
+                Region = "",
+                Country = "",
+                Email = TrimTo(user.Email ?? "", 200),
+                Phone = "",
+                Status = "Active",
                 AcquisitionChannel = "Direct",
                 CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
             };

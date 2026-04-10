@@ -76,6 +76,8 @@ export default function PublicLayout() {
               <Link to="/impact" onClick={() => setMenuOpen(false)} className="block px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300">Our impact</Link>
               <Link to="/privacy" onClick={() => setMenuOpen(false)} className="block px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300">Privacy</Link>
               {isAdmin && <Link to="/admin" onClick={() => setMenuOpen(false)} className="block px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300">Admin portal</Link>}
+              {isDonor && !isAdmin && <Link to="/donor" onClick={() => setMenuOpen(false)} className="block px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300">My donations</Link>}
+              {isDonor && !isAdmin && <Link to="/donor/security" onClick={() => setMenuOpen(false)} className="block px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300">Security</Link>}
               {user
                 ? <button onClick={logout} className="block px-2 py-1.5 text-sm text-gray-500">Sign out</button>
                 : <Link to="/login" onClick={() => setMenuOpen(false)} className="block px-2 py-1.5 text-sm text-gray-600 dark:text-gray-300">Log in</Link>
