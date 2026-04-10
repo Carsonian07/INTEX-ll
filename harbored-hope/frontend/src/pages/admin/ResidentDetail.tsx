@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { api, mlApi, buildResidentRiskInput, Resident, ProcessRecording, HomeVisitation, InterventionPlan, ResidentRiskResult } from '../../lib/api';
+import { api, mlApi, buildResidentRiskInput, Resident, ProcessRecording, HomeVisitation, InterventionPlan, ResidentRiskResult, CounselingHealthResult } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import ConfirmDialog from '../../components/ConfirmDialog';
 
@@ -30,6 +30,9 @@ export default function ResidentDetail() {
   const [riskData, setRiskData]         = useState<ResidentRiskResult | null>(null);
   const [riskLoading, setRiskLoading]   = useState(false);
   const [riskError, setRiskError]       = useState<string | null>(null);
+  const [chData, setChData]             = useState<CounselingHealthResult | null>(null);
+  const [chLoading, setChLoading]       = useState(false);
+  const [chError, setChError]           = useState<string | null>(null);
   const [tab, setTab]                   = useState<Tab>('profile');
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState<string | null>(null);
@@ -62,10 +65,30 @@ export default function ResidentDetail() {
       const input = buildResidentRiskInput(resident, firstRecording);
       mlApi.residentRisk(input)
         .then(setRiskData)
-        .catch(err => setRiskError(err?.message ?? 'Prediction failed'))
+        .catch(err => {
+          const msg: string = err?.message ?? '';
+          if (recordings.length === 0 || msg.toLowerCase().includes('unexpected token') || msg.toLowerCase().includes('json')) {
+            setRiskError('No counseling sessions yet, cannot calculate risk.');
+          } else {
+            setRiskError(msg || 'Prediction failed');
+          }
+        })
         .finally(() => setRiskLoading(false));
     }
   }, [tab, resident, recordings, riskData, riskLoading, riskError]);
+
+  useEffect(() => {
+    if (tab === 'counseling' && resident && recordings.length > 0 && !chData && !chLoading && !chError) {
+      setChLoading(true);
+      mlApi.counselingHealth(residentId)
+        .then(setChData)
+        .catch(err => {
+          const msg: string = err?.message ?? '';
+          setChError(msg.includes('No counseling') ? msg : (msg || 'Counseling health prediction failed.'));
+        })
+        .finally(() => setChLoading(false));
+    }
+  }, [tab, resident, residentId, chData, chLoading, chError]);
 
   const handleDelete = async () => {
     await api.residents.delete(residentId);
@@ -85,7 +108,7 @@ export default function ResidentDetail() {
     { key: 'counseling',  label: `Counseling (${recordings.length})` },
     { key: 'visitations', label: `Home visits (${visitations.length})` },
     { key: 'conferences', label: `Conferences (${conferences.length})` },
-    { key: 'ml',          label: 'Predictive risk' },
+    { key: 'ml',          label: 'Risk Predictions' },
   ];
 
   return (
@@ -113,7 +136,7 @@ export default function ResidentDetail() {
         <div className="flex gap-2">
           <Link to={`/admin/residents/${residentId}/process-recordings`}
             className="text-sm bg-hh-ocean text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-            Add session
+            Add counseling session
           </Link>
           <Link to={`/admin/residents/${residentId}/home-visitations`}
             className="text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
@@ -195,6 +218,68 @@ export default function ResidentDetail() {
         <div className="space-y-4">
           {recordings.length >= 2 && <EmotionChart recordings={recordings} />}
           {recordings.length === 0 && <p className="text-sm text-gray-400">No process recordings yet.</p>}
+
+          {/* Counseling health prediction */}
+          {recordings.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-5">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Counseling effectiveness — predicted health outcome</p>
+              <p className="text-xs text-gray-400 mb-4">Predicts expected health score based on this resident's counseling session patterns.</p>
+
+              {chLoading && (
+                <div className="flex items-center justify-center h-16">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-hh-navy" />
+                </div>
+              )}
+
+              {chError && (
+                <p className="text-sm text-red-500 dark:text-red-400">{chError}</p>
+              )}
+
+              {chData && (() => {
+                const score = chData.prediction;
+                const pct   = Math.min(100, Math.max(0, (score / 5) * 100));
+                const color = score >= 4 ? 'bg-green-500' : score >= 3 ? 'bg-hh-ocean' : score >= 2 ? 'bg-amber-400' : 'bg-red-500';
+                const badge = score >= 4
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : score >= 3
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                  : score >= 2
+                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+                const label = score >= 4 ? 'Positive' : score >= 3 ? 'Neutral' : score >= 2 ? 'Concerning' : 'Poor';
+                return (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-2xl font-semibold text-hh-navy dark:text-white">
+                        {score.toFixed(2)}
+                        <span className="text-sm font-normal text-gray-400 ml-1">/ 5.0</span>
+                      </p>
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${badge}`}>{label}</span>
+                    </div>
+                    <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-1">
+                      <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-gray-400 mt-1 mb-3">
+                      <span>0 — Poor</span>
+                      <span>3 — Neutral</span>
+                      <span>5 — Positive</span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Based on {recordings.length} counseling session{recordings.length !== 1 ? 's' : ''}. This score reflects predicted health trajectory from session patterns — not a direct health measurement.
+                    </p>
+                    <div className="flex justify-end mt-3">
+                      <button
+                        onClick={() => { setChData(null); setChError(null); }}
+                        className="text-xs text-hh-ocean hover:underline"
+                      >
+                        Re-run prediction
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
           {recordings.map(r => (
             <div key={r.recordingId} className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-5">
               <div className="flex items-center justify-between mb-3">
@@ -222,6 +307,7 @@ export default function ResidentDetail() {
               )}
             </div>
           ))}
+
         </div>
       )}
 
@@ -458,6 +544,7 @@ export default function ResidentDetail() {
               </div>
             );
           })()}
+
         </div>
       )}
 
@@ -529,11 +616,11 @@ function EmotionChart({ recordings }: { recordings: ProcessRecording[] }) {
         ))}
 
         {/* X-axis date labels (first and last only) */}
-        <text x={xScale(0)} y={H - 4} textAnchor="middle" fontSize="9" fill="currentColor" opacity="0.45">
+        <text x={xScale(0)} y={H - 4} textAnchor="start" fontSize="9" fill="currentColor" opacity="0.45">
           {new Date(scores[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
         </text>
         {n > 1 && (
-          <text x={xScale(n - 1)} y={H - 4} textAnchor="middle" fontSize="9" fill="currentColor" opacity="0.45">
+          <text x={xScale(n - 1)} y={H - 4} textAnchor="end" fontSize="9" fill="currentColor" opacity="0.45">
             {new Date(scores[n - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </text>
         )}

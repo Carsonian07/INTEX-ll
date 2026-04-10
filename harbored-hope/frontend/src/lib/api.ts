@@ -50,7 +50,7 @@ export const api = {
     loginMfa:   (userId: string, code: string) =>
       request<LoginResponse>('/api/auth/login/mfa', { method: 'POST', body: JSON.stringify({ userId, code }) }),
     register:   (email: string, password: string, displayName: string) =>
-      request('/api/auth/register', { method: 'POST', body: JSON.stringify({ email, password, displayName }) }),
+      request<LoginResponse>('/api/auth/register', { method: 'POST', body: JSON.stringify({ email, password, displayName }) }),
     me:         () => request<MeResponse>('/api/auth/me'),
     mySupporter: () => request<SupporterProfile | null>('/api/auth/me/supporter').then(r => r ?? null),
     mfaSetup:   () => request<MfaSetupResponse>('/api/auth/mfa/setup'),
@@ -124,12 +124,13 @@ export const api = {
   },
 
   supporters: {
-    list:   (params: { type?: string; status?: string; search?: string; page?: number } = {}) => {
+    list:   (params: { type?: string; status?: string; search?: string; page?: number; pageSize?: number } = {}) => {
       const q = new URLSearchParams();
-      if (params.type)   q.set('type', params.type);
-      if (params.status) q.set('status', params.status);
-      if (params.search) q.set('search', params.search);
-      if (params.page)   q.set('page', String(params.page));
+      if (params.type)     q.set('type', params.type);
+      if (params.status)   q.set('status', params.status);
+      if (params.search)   q.set('search', params.search);
+      if (params.page)     q.set('page', String(params.page));
+      if (params.pageSize) q.set('pageSize', String(params.pageSize));
       return request<PaginatedResponse<Supporter>>(`/api/supporters?${q}`);
     },
     get:    (id: number) => request<Supporter>(`/api/supporters/${id}`),
@@ -272,6 +273,11 @@ export interface ResidentRiskResult {
   cls_threshold: number;
 }
 
+export interface CounselingHealthResult {
+  prediction: number;
+  target_col: string;
+}
+
 export function buildResidentRiskInput(resident: Resident, firstRecording?: ProcessRecording): ResidentRiskInput {
   const dob = new Date(resident.dateOfBirth);
   const admitted = new Date(resident.dateOfAdmission);
@@ -321,6 +327,8 @@ export function buildResidentRiskInput(resident: Resident, firstRecording?: Proc
 export const mlApi = {
   residentRisk: (input: ResidentRiskInput) =>
     mlRequest<ResidentRiskResult>('/api/ml/resident-risk', input),
+  counselingHealth: (residentId: number) =>
+    request<CounselingHealthResult>(`/api/ml/counseling-health/${residentId}`),
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -365,7 +373,9 @@ export interface AdminStats {
   recentDonationCount: number;
   recentDonationValue: number;
   upcomingConferences: unknown[];
+  recentPastConferences: unknown[];
   recentIncidents: unknown[];
+  pastIncidents: unknown[];
   safehouseOverview: SafehouseOverviewItem[];
 }
 
@@ -395,6 +405,7 @@ export interface SafehousePerformance {
 
 export interface Reports {
   donationTrends: { year: number; month: number; total: number; count: number }[];
+  donationByCampaign: { campaign: string; total: number; count: number }[];
   educationTrends: { year: number; month: number; avgProgress: number }[];
   healthTrends: { year: number; month: number; avgHealth: number; avgNutrition: number }[];
   reintegrationOutcomes: ReintegrationOutcome[];

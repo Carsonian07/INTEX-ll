@@ -48,9 +48,9 @@ export default function ProcessRecordingPage() {
         <span>/</span>
         <Link to={`/admin/residents/${residentId}`} className="hover:text-hh-navy transition-colors">Resident {residentId}</Link>
         <span>/</span>
-        <span className="text-gray-700 dark:text-gray-300">Process recording</span>
+        <span className="text-gray-700 dark:text-gray-300">Add counseling session</span>
       </div>
-      <h1 className="font-serif text-2xl font-medium text-hh-navy dark:text-white mb-6">Add process recording</h1>
+      <h1 className="font-serif text-2xl font-medium text-hh-navy dark:text-white mb-6">Add counseling session</h1>
 
       {submitted ? (
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-6 text-center">
@@ -66,7 +66,12 @@ export default function ProcessRecordingPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Session date"><input type="date" required value={form.sessionDate} onChange={e => setForm({...form, sessionDate: e.target.value})} className="input" /></Field>
-            <Field label="Social worker"><input type="text" required value={form.socialWorker} onChange={e => setForm({...form, socialWorker: e.target.value})} className="input" placeholder="Full name" /></Field>
+            <Field label="Social worker">
+              <select required value={form.socialWorker} onChange={e => setForm({...form, socialWorker: e.target.value})} className="input">
+                <option value="">Select social worker…</option>
+                {Array.from({ length: 20 }, (_, i) => `SW-${i + 1}`).map(sw => <option key={sw}>{sw}</option>)}
+              </select>
+            </Field>
             <Field label="Session type">
               <select value={form.sessionType} onChange={e => setForm({...form, sessionType: e.target.value})} className="input">
                 <option>Individual</option><option>Group</option>
@@ -106,7 +111,7 @@ export default function ProcessRecordingPage() {
 
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={loading} className="bg-hh-navy text-white text-sm font-medium px-6 py-2.5 rounded-lg hover:bg-hh-navy-dark transition-colors disabled:opacity-60">
-              {loading ? 'Saving…' : 'Save recording'}
+              {loading ? 'Saving…' : 'Add counseling session'}
             </button>
             <Link to={`/admin/residents/${residentId}`} className="text-sm border border-gray-200 dark:border-gray-700 px-6 py-2.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
               Cancel

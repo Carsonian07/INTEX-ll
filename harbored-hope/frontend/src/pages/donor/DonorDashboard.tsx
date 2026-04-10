@@ -170,10 +170,11 @@ export default function DonorDashboard() {
   };
 
   // Step 2: modal confirmed — submit donation + fetch impact
-  const handleConfirm = async (details: { name: string; email: string; phone: string; state: string; country: string }) => {
+  const handleConfirm = async (details: { name: string; email: string; phone: string; state: string; country: string; amount?: number }) => {
+    const confirmedAmount = details.amount ?? finalAmount;
     setShowModal(false);
     setDonorFirstName(details.name.split(' ')[0] || 'Friend');
-    setDonatedAmount(finalAmount); // capture before form reset
+    setDonatedAmount(confirmedAmount); // capture before form reset
     setSubmitting(true);
     setImpactLoading(true);
     setImpactData(null);
@@ -184,7 +185,7 @@ export default function DonorDashboard() {
       await api.donations.create({
         supporterId: user?.supporterId ?? 0,
         donationType: 'Monetary',
-        amount: finalAmount,
+        amount: confirmedAmount,
         isRecurring,
         campaignName: campaign,
         channelSource: 'Direct',
@@ -203,7 +204,7 @@ export default function DonorDashboard() {
       setTimeout(() => setSuccess(false), 5000);
 
       // Fetch projected impact from storytelling API (API uses PHP internally)
-      const impactJson = await api.storytelling.projectedImpact(finalAmount * USD_TO_PHP, campaign);
+      const impactJson = await api.storytelling.projectedImpact(confirmedAmount * USD_TO_PHP, campaign);
       const residentMonths = impactJson.projected_resident_months ?? 0;
       setImpactData({
         area_funded: campaign,
@@ -502,6 +503,8 @@ export default function DonorDashboard() {
           amountDisplay={amountDisplay}
           campaign={campaign}
           isRecurring={isRecurring}
+          isCustomAmount={amount === 'custom'}
+          initialAmount={finalAmount}
           initialName={supporterProfile?.displayName ?? user?.displayName ?? ''}
           initialEmail={supporterProfile?.email ?? user?.email ?? ''}
           initialPhone={supporterProfile?.phone ?? ''}

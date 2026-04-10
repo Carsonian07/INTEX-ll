@@ -103,6 +103,21 @@ public class DashboardController(AppDbContext db) : ControllerBase
             })
             .ToListAsync();
 
+        var recentPastConferences = await db.InterventionPlans
+            .Where(p => p.CaseConferenceDate < today && p.CaseConferenceDate >= today.AddDays(-365))
+            .Include(p => p.Resident)
+            .OrderByDescending(p => p.CaseConferenceDate)
+            .Take(5)
+            .Select(p => new
+            {
+                p.PlanId,
+                p.CaseConferenceDate,
+                p.PlanCategory,
+                residentCode = p.Resident.CaseControlNo,
+                p.Resident.SafehouseId
+            })
+            .ToListAsync();
+
         var recentIncidents = await db.IncidentReports
             .Where(i => i.IncidentDate >= today.AddDays(-7) && !i.Resolved)
             .Include(i => i.Safehouse)
@@ -114,6 +129,22 @@ public class DashboardController(AppDbContext db) : ControllerBase
                 i.IncidentDate,
                 i.IncidentType,
                 i.Severity,
+                safehouseName = i.Safehouse.Name
+            })
+            .ToListAsync();
+
+        var pastIncidents = await db.IncidentReports
+            .Where(i => i.IncidentDate >= today.AddDays(-60) && i.IncidentDate < today.AddDays(-7))
+            .Include(i => i.Safehouse)
+            .OrderByDescending(i => i.IncidentDate)
+            .Take(10)
+            .Select(i => new
+            {
+                i.IncidentId,
+                i.IncidentDate,
+                i.IncidentType,
+                i.Severity,
+                i.Resolved,
                 safehouseName = i.Safehouse.Name
             })
             .ToListAsync();
@@ -141,7 +172,9 @@ public class DashboardController(AppDbContext db) : ControllerBase
             recentDonationCount,
             recentDonationValue = Math.Round(recentDonationValueUsd, 2),
             upcomingConferences,
+            recentPastConferences,
             recentIncidents,
+            pastIncidents,
             safehouseOverview
         });
     }
@@ -159,7 +192,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
         var donationRows = await db.Donations
             .AsNoTracking()
             .Where(d => d.DonationType == "Monetary" && d.DonationDate >= cutoff && d.Amount.HasValue)
-            .Select(d => new { d.Amount, d.DonationDate })
+            .Select(d => new { d.Amount, d.DonationDate, d.CampaignName })
             .ToListAsync();
 
         var donationTrends = donationRows
@@ -172,6 +205,17 @@ public class DashboardController(AppDbContext db) : ControllerBase
                 count = g.Count()
             })
             .OrderBy(x => x.year).ThenBy(x => x.month)
+            .ToList();
+
+        var donationByCampaign = donationRows
+            .GroupBy(d => string.IsNullOrWhiteSpace(d.CampaignName) ? "No campaign" : d.CampaignName)
+            .Select(g => new
+            {
+                campaign = g.Key,
+                total    = g.Sum(d => NormalizeDonationPhp(d.Amount!.Value, d.DonationDate)),
+                count    = g.Count()
+            })
+            .OrderByDescending(x => x.total)
             .ToList();
 
         // Education progress over time
@@ -255,6 +299,7 @@ public class DashboardController(AppDbContext db) : ControllerBase
         return Ok(new
         {
             donationTrends,
+            donationByCampaign,
             educationTrends,
             healthTrends,
             reintegrationOutcomes,

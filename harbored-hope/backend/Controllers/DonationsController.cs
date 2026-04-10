@@ -47,6 +47,7 @@ public class DonationsController(AppDbContext db, UserManager<AppUser> userManag
 
         var donations = await query
             .OrderByDescending(d => d.DonationDate)
+            .ThenByDescending(d => d.DonationId)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(d => new DonationListDto

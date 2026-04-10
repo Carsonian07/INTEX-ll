@@ -64,7 +64,12 @@ export default function HomeVisitationPage() {
           {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">{error}</div>}
           <div className="grid grid-cols-2 gap-4">
             <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Visit date</label><input type="date" required className={inp} value={form.visitDate} onChange={e => setForm({...form, visitDate: e.target.value})} /></div>
-            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Social worker</label><input type="text" required className={inp} value={form.socialWorker} onChange={e => setForm({...form, socialWorker: e.target.value})} /></div>
+            <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Social worker</label>
+              <select required className={inp} value={form.socialWorker} onChange={e => setForm({...form, socialWorker: e.target.value})}>
+                <option value="">Select social worker…</option>
+                {Array.from({ length: 20 }, (_, i) => `SW-${i + 1}`).map(sw => <option key={sw}>{sw}</option>)}
+              </select>
+            </div>
             <div><label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Visit type</label>
               <select className={inp} value={form.visitType} onChange={e => setForm({...form, visitType: e.target.value})}>
                 {['Initial Assessment','Routine Follow-Up','Reintegration Assessment','Post-Placement Monitoring','Emergency'].map(t => <option key={t}>{t}</option>)}

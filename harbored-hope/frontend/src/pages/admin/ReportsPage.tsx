@@ -16,13 +16,13 @@ function fmtMoney(php: number, usd: boolean) {
 }
 
 function TrendBar({
-  value, max, color, label, tooltip,
+  value, max, color, label, tooltip, showLabel = true,
 }: {
-  value: number; max: number; color: string; label: string; tooltip: string;
+  value: number; max: number; color: string; label: string; tooltip: string; showLabel?: boolean;
 }) {
   const h = Math.max(2, Math.round((value / max) * BAR_H));
   return (
-    <div className="flex-1 flex flex-col items-center gap-1">
+    <div className="flex-1 min-w-0 flex flex-col items-center gap-1">
       <div
         className={`w-full ${color} rounded-t-sm cursor-default relative group`}
         style={{ height: `${h}px` }}
@@ -31,7 +31,9 @@ function TrendBar({
           {tooltip}
         </span>
       </div>
-      <span className="text-[10px] text-gray-400 whitespace-nowrap">{label}</span>
+      <span className="text-[10px] text-gray-400 whitespace-nowrap" style={{ visibility: showLabel ? 'visible' : 'hidden' }}>
+        {label}
+      </span>
     </div>
   );
 }
@@ -56,6 +58,7 @@ export default function ReportsPage() {
   const [error, setError]           = useState('');
   const [months, setMonths]         = useState(12);
   const [usd, setUsd]               = useState(false);
+  const [donationView, setDonationView] = useState<'month' | 'campaign'>('month');
   const [selectedType, setSelectedType] = useState('');
 
   useEffect(() => {
@@ -64,7 +67,10 @@ export default function ReportsPage() {
     api.dashboard.reports(months)
       .then(r => {
         setReports(r);
-        const types = [...new Set(r.reintegrationOutcomes.map(o => o.reintegrationType ?? 'Unspecified'))].sort();
+        const types = [...new Set(r.reintegrationOutcomes
+          .map(o => o.reintegrationType?.trim() || 'Unspecified')
+          .filter(t => !/^\d+$/.test(t))
+        )].sort();
         if (types.length) setSelectedType(prev => types.includes(prev) ? prev : types[0]);
       })
       .catch((e: unknown) => {
@@ -77,14 +83,21 @@ export default function ReportsPage() {
   const totalDonations     = reports?.donationTrends.reduce((s, d) => s + d.total, 0) ?? 0;
   const totalDonationCount = reports?.donationTrends.reduce((s, d) => s + d.count, 0) ?? 0;
   const maxDonation        = Math.max(1, ...(reports?.donationTrends.map(d => d.total) ?? []));
+  const maxCampaign        = Math.max(1, ...(reports?.donationByCampaign.map(d => d.total) ?? []));
   const maxHealth          = 5;
 
   const reintegrationTypes = reports
-    ? [...new Set(reports.reintegrationOutcomes.map(o => o.reintegrationType ?? 'Unspecified'))].sort()
+    ? [...new Set(reports.reintegrationOutcomes
+        .map(o => o.reintegrationType?.trim() || 'Unspecified')
+        .filter(t => !/^\d+$/.test(t))
+      )].sort()
     : [];
 
   const selectedOutcomes: ReintegrationOutcome[] = reports
-    ? reports.reintegrationOutcomes.filter(o => (o.reintegrationType ?? 'Unspecified') === selectedType)
+    ? reports.reintegrationOutcomes.filter(o => {
+        const t = o.reintegrationType?.trim() || 'Unspecified';
+        return !/^\d+$/.test(t) && t === selectedType;
+      })
     : [];
 
   const STATUS_COLORS: Record<string, string> = {
@@ -153,31 +166,75 @@ export default function ReportsPage() {
           </div>
 
           {/* Donation trend */}
-          <ChartShell
-            title="Donation trend"
-            sub={`Monthly monetary donations (${usd ? 'USD' : 'PHP'})`}
-          >
-            {reports?.donationTrends.length ? (
-              <div className="flex items-end gap-1.5" style={{ height: `${BAR_H + 20}px` }}>
-                {reports.donationTrends.map((d, i) => (
-                  <TrendBar
-                    key={i}
-                    value={d.total}
-                    max={maxDonation}
-                    color="bg-hh-navy"
-                    label={monthLabel(d.month, d.year)}
-                    tooltip={`${fmtMoney(d.total, usd)} · ${d.count} gifts`}
-                  />
-                ))}
+          <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-6">
+            <div className="flex items-start justify-between mb-1">
+              <h2 className="font-medium text-hh-navy dark:text-white">Donation trend</h2>
+              <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs">
+                <button
+                  onClick={() => setDonationView('month')}
+                  className={`px-3 py-1.5 transition-colors ${donationView === 'month' ? 'bg-hh-navy text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                >
+                  By month
+                </button>
+                <button
+                  onClick={() => setDonationView('campaign')}
+                  className={`px-3 py-1.5 transition-colors ${donationView === 'campaign' ? 'bg-hh-navy text-white' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                >
+                  By campaign
+                </button>
               </div>
-            ) : <NoData />}
-          </ChartShell>
+            </div>
+            <p className="text-xs text-gray-400 mb-5">
+              {donationView === 'month'
+                ? `Monthly monetary donations (${usd ? 'USD' : 'PHP'})`
+                : `Total per campaign over selected period (${usd ? 'USD' : 'PHP'})`}
+            </p>
+            {donationView === 'month' ? (
+              reports?.donationTrends.length ? (
+                <div className={`flex items-end px-2 ${reports.donationTrends.length > 15 ? 'gap-0.5' : 'gap-1.5'}`} style={{ height: `${BAR_H + 20}px` }}>
+                  {reports.donationTrends.map((d, i) => (
+                    <TrendBar
+                      key={i}
+                      value={d.total}
+                      max={maxDonation}
+                      color="bg-hh-navy"
+                      label={monthLabel(d.month, d.year)}
+                      tooltip={`${fmtMoney(d.total, usd)} · ${d.count} gifts`}
+                      showLabel={reports.donationTrends.length <= 15 || i % 3 === 0}
+                    />
+                  ))}
+                </div>
+              ) : <NoData />
+            ) : (
+              reports?.donationByCampaign.length ? (
+                <div className="space-y-3">
+                  {reports.donationByCampaign.map((c, i) => (
+                    <div key={i}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-56">{c.campaign}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0 ml-4">
+                          <strong className="text-gray-700 dark:text-gray-200">{fmtMoney(c.total, usd)}</strong>
+                          <span className="ml-1.5 text-gray-400">· {c.count} gifts</span>
+                        </span>
+                      </div>
+                      <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-hh-navy rounded-full transition-all"
+                          style={{ width: `${Math.round((c.total / maxCampaign) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : <NoData />
+            )}
+          </div>
 
           {/* Education + health */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ChartShell title="Education progress" sub="Average % progress per month">
               {reports?.educationTrends.length ? (
-                <div className="flex items-end gap-1.5" style={{ height: `${BAR_H + 20}px` }}>
+                <div className={`flex items-end px-2 ${reports.educationTrends.length > 15 ? 'gap-0.5' : 'gap-1.5'}`} style={{ height: `${BAR_H + 20}px` }}>
                   {reports.educationTrends.map((d, i) => (
                     <TrendBar
                       key={i}
@@ -186,6 +243,7 @@ export default function ReportsPage() {
                       color="bg-hh-ocean"
                       label={monthLabel(d.month, d.year)}
                       tooltip={`Avg progress: ${d.avgProgress}%`}
+                      showLabel={reports.educationTrends.length <= 15 || i % 3 === 0}
                     />
                   ))}
                 </div>
@@ -194,7 +252,7 @@ export default function ReportsPage() {
 
             <ChartShell title="Health scores" sub="Average general health score (1–5 scale)">
               {reports?.healthTrends.length ? (
-                <div className="flex items-end gap-1.5" style={{ height: `${BAR_H + 20}px` }}>
+                <div className={`flex items-end px-2 ${reports.healthTrends.length > 15 ? 'gap-0.5' : 'gap-1.5'}`} style={{ height: `${BAR_H + 20}px` }}>
                   {reports.healthTrends.map((d, i) => (
                     <TrendBar
                       key={i}
@@ -203,6 +261,7 @@ export default function ReportsPage() {
                       color="bg-hh-gold"
                       label={monthLabel(d.month, d.year)}
                       tooltip={`Health: ${d.avgHealth} · Nutrition: ${d.avgNutrition}`}
+                      showLabel={reports.healthTrends.length <= 15 || i % 3 === 0}
                     />
                   ))}
                 </div>

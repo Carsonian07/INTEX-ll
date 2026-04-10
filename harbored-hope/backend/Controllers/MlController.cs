@@ -155,6 +155,92 @@ public class MlController(IHttpClientFactory httpClientFactory, AppDbContext db)
         return Content(json, "application/json");
     }
 
+    // ── GET /api/ml/counseling-health/{residentId} ────────────────────────────
+    /// Computes counseling-session features for a resident and calls the
+    /// /predict/counseling/health endpoint, returning the predicted health score.
+    [HttpGet("counseling-health/{residentId:int}")]
+    public async Task<IActionResult> CounselingHealth(int residentId)
+    {
+        var resident = await db.Residents.FindAsync(residentId);
+        if (resident is null) return NotFound();
+
+        var recordings = await db.ProcessRecordings
+            .AsNoTracking()
+            .Where(r => r.ResidentId == residentId)
+            .ToListAsync();
+
+        int n = recordings.Count;
+        if (n == 0)
+            return BadRequest(new { message = "No counseling sessions yet, cannot calculate health prediction." });
+
+        // Emotion score mapping (mirrors the frontend EMOTION_SCORE table)
+        static int EmotionScore(string? state) => state?.Trim() switch
+        {
+            "Happy"     => 5,
+            "Hopeful"   => 4,
+            "Calm"      => 3,
+            "Withdrawn" => 2,
+            "Anxious"   => 2,
+            "Sad"       => 1,
+            "Angry"     => 1,
+            "Distressed"=> 0,
+            _           => 3, // default neutral
+        };
+
+        double avgDuration     = recordings.Average(r => (double)r.SessionDurationMinutes);
+        double improvementRate = recordings.Count(r => EmotionScore(r.EmotionalStateEnd) > EmotionScore(r.EmotionalStateObserved)) / (double)n;
+        double negStartRate    = recordings.Count(r => EmotionScore(r.EmotionalStateObserved) <= 1) / (double)n;
+        double negEndRate      = recordings.Count(r => EmotionScore(r.EmotionalStateEnd)      <= 1) / (double)n;
+        double concernsRate    = recordings.Count(r => r.ConcernsFlagged) / (double)n;
+        double individualRate  = recordings.Count(r => r.SessionType == "Individual") / (double)n;
+        double referralRate    = recordings.Count(r => r.ReferralMade)    / (double)n;
+
+        int riskNumeric = resident.CurrentRiskLevel switch
+        {
+            "Low"      => 1,
+            "Medium"   => 2,
+            "High"     => 3,
+            "Critical" => 4,
+            _          => 2,
+        };
+
+        // Ordinal-encode case category by sorting all distinct values alphabetically
+        // (consistent with how the model was likely trained via LabelEncoder)
+        var allCategories = await db.Residents
+            .Select(r => r.CaseCategory)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToListAsync();
+        int caseCatCode = allCategories.IndexOf(resident.CaseCategory);
+        if (caseCatCode < 0) caseCatCode = 0;
+
+        var dob      = resident.DateOfBirth.ToDateTime(TimeOnly.MinValue);
+        var admitted = resident.DateOfAdmission.ToDateTime(TimeOnly.MinValue);
+        double ageAtAdmission = (admitted - dob).TotalDays / 365.25;
+
+        var payload = new
+        {
+            n_sessions       = n,
+            avg_duration     = Math.Round(avgDuration,     4),
+            improvement_rate = Math.Round(improvementRate, 4),
+            neg_start_rate   = Math.Round(negStartRate,    4),
+            neg_end_rate     = Math.Round(negEndRate,      4),
+            concerns_rate    = Math.Round(concernsRate,    4),
+            individual_rate  = Math.Round(individualRate,  4),
+            referral_rate    = Math.Round(referralRate,    4),
+            risk_numeric     = riskNumeric,
+            case_cat_code    = caseCatCode,
+            age_at_admission = Math.Round(ageAtAdmission,  2),
+        };
+
+        var client  = httpClientFactory.CreateClient();
+        var json    = JsonSerializer.Serialize(payload, CamelCase);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+        var response = await client.PostAsync($"{MlApiBase}/predict/counseling/health", content);
+        var result   = await response.Content.ReadAsStringAsync();
+        return Content(result, "application/json");
+    }
+
     // ── POST /api/ml/reintegration-readiness ──────────────────────────────────
     /// Predicts whether a resident is ready for reintegration.
     /// Input: residentId. Output: score 0-1, label, top features.

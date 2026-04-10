@@ -1,10 +1,9 @@
 import { useState, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 
 export default function RegisterPage() {
-  const navigate = useNavigate();
   const { login } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail]             = useState('');
@@ -22,12 +21,10 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      await api.auth.register(email, password, displayName);
-      // Auto-login after registration
-      const res = await api.auth.login(email, password);
+      const res = await api.auth.register(email, password, displayName);
       if (res.token) {
         await login(res.token);
-        navigate('/donor');
+        // RedirectIfAuthed wrapping this page handles the navigation based on role
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Registration failed.');

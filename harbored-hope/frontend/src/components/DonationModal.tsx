@@ -62,12 +62,14 @@ interface DonationModalProps {
   amountDisplay: string;   // e.g. "$25" or "$25 / month"
   campaign: string;
   isRecurring: boolean;
+  isCustomAmount?: boolean;
+  initialAmount?: number;
   initialName: string;
   initialEmail?: string;
   initialPhone?: string;
   initialState?: string;
   initialCountry?: string;
-  onConfirm: (details: { name: string; email: string; phone: string; state: string; country: string }) => void;
+  onConfirm: (details: { name: string; email: string; phone: string; state: string; country: string; amount?: number }) => void;
   onCancel: () => void;
 }
 
@@ -75,6 +77,8 @@ export default function DonationModal({
   amountDisplay,
   campaign,
   isRecurring,
+  isCustomAmount,
+  initialAmount,
   initialName,
   initialEmail,
   initialPhone,
@@ -87,7 +91,8 @@ export default function DonationModal({
   const [email, setEmail] = useState(initialEmail ?? '');
   const [phone, setPhone] = useState(initialPhone ?? '');
   const [state, setState] = useState(initialState ?? '');
-  const [country, setCountry] = useState(initialCountry ?? '');
+  const [country, setCountry] = useState(initialCountry || 'USA');
+  const [editableAmount, setEditableAmount] = useState(initialAmount ?? 0);
   const [error, setError] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('card');
 
@@ -125,6 +130,7 @@ export default function DonationModal({
       phone: phone.trim(),
       state: state.trim(),
       country: country.trim(),
+      ...(isCustomAmount ? { amount: editableAmount } : {}),
     });
   };
 
@@ -236,19 +242,38 @@ export default function DonationModal({
             </div>
           </div>
 
-          {/* Confirm amount (read-only) */}
+          {/* Confirm amount */}
           <div>
             <label className="block text-xs text-gray-500 uppercase tracking-wide mb-1.5">
               Donation Amount
             </label>
-            <div className="px-4 py-3 bg-[#1B2A4A]/6 border border-[#1B2A4A]/20 rounded-lg flex items-center justify-between">
-              <span className="text-[#1B2A4A] font-bold text-xl">{amountDisplay}</span>
-              {isRecurring && (
-                <span className="text-xs bg-[#C8962E]/15 text-[#C8962E] font-medium px-2 py-0.5 rounded-full">
-                  Monthly
-                </span>
-              )}
-            </div>
+            {isCustomAmount ? (
+              <div className="px-4 py-3 bg-[#1B2A4A]/6 border border-[#1B2A4A]/20 rounded-lg flex items-center gap-2">
+                <span className="text-[#1B2A4A] font-bold text-xl">$</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={editableAmount || ''}
+                  onChange={e => setEditableAmount(parseFloat(e.target.value) || 0)}
+                  className="flex-1 text-[#1B2A4A] font-bold text-xl bg-transparent focus:outline-none focus:ring-0 border-none p-0 w-full"
+                />
+                {isRecurring && (
+                  <span className="text-xs bg-[#C8962E]/15 text-[#C8962E] font-medium px-2 py-0.5 rounded-full whitespace-nowrap">
+                    / month
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="px-4 py-3 bg-[#1B2A4A]/6 border border-[#1B2A4A]/20 rounded-lg flex items-center justify-between">
+                <span className="text-[#1B2A4A] font-bold text-xl">{amountDisplay}</span>
+                {isRecurring && (
+                  <span className="text-xs bg-[#C8962E]/15 text-[#C8962E] font-medium px-2 py-0.5 rounded-full">
+                    Monthly
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Payment method */}

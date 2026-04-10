@@ -89,13 +89,15 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Upcoming conferences */}
+        {/* Upcoming + past conferences */}
         <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-medium text-hh-navy dark:text-white">Upcoming case conferences</h2>
+            <h2 className="font-medium text-hh-navy dark:text-white">Case conferences</h2>
             <span className="text-xs text-gray-400">Next 14 days</span>
           </div>
-          <div className="space-y-3">
+
+          {/* Upcoming */}
+          <div className="space-y-3 mb-4">
             {(stats?.upcomingConferences as Array<{
               planId: number; caseConferenceDate: string; planCategory: string; residentCode: string;
             }>)?.map(c => (
@@ -115,49 +117,105 @@ export default function AdminDashboard() {
               <p className="text-sm text-gray-400">No upcoming conferences.</p>
             )}
           </div>
+
+          {/* Past conferences */}
+          {!!(stats?.recentPastConferences as unknown[])?.length && (
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Recent past (last year)</p>
+              <div className="space-y-3">
+                {(stats?.recentPastConferences as Array<{
+                  planId: number; caseConferenceDate: string; planCategory: string; residentCode: string;
+                }>).map(c => (
+                  <div key={c.planId} className="flex items-center gap-3 py-2 border-b border-gray-50 dark:border-gray-800 last:border-0">
+                    <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 text-xs font-semibold">
+                      {new Date(c.caseConferenceDate).getDate()}
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{c.residentCode} · {c.planCategory}</p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(c.caseConferenceDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Recent incidents */}
+      {/* Incidents */}
       <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-medium text-hh-navy dark:text-white">Open incidents (last 7 days)</h2>
+          <h2 className="font-medium text-hh-navy dark:text-white">Incidents</h2>
         </div>
-        {(stats?.recentIncidents as Array<{
-          incidentId: number; incidentDate: string; incidentType: string; severity: string; safehouseName: string;
-        }>)?.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-800">
-                  <th className="text-left py-2 pr-4">Date</th>
-                  <th className="text-left py-2 pr-4">Type</th>
-                  <th className="text-left py-2 pr-4">Severity</th>
-                  <th className="text-left py-2">Safehouse</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(stats?.recentIncidents as Array<{ incidentId: number; incidentDate: string; incidentType: string; severity: string; safehouseName: string; }>)?.map(i => (
-                  <tr key={i.incidentId} className="border-b border-gray-50 dark:border-gray-800 last:border-0">
-                    <td className="py-2.5 pr-4 text-gray-600 dark:text-gray-400">
-                      {new Date(i.incidentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </td>
-                    <td className="py-2.5 pr-4 text-gray-800 dark:text-gray-200">{i.incidentType}</td>
-                    <td className="py-2.5 pr-4">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${riskColor[i.severity]}`}>
-                        {i.severity}
-                      </span>
-                    </td>
-                    <td className="py-2.5 text-gray-600 dark:text-gray-400">{i.safehouseName}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+
+        {/* Open — last 7 days */}
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Open — last 7 days</p>
+        {(stats?.recentIncidents as unknown[])?.length ? (
+          <IncidentTable rows={stats!.recentIncidents as IncidentRow[]} />
         ) : (
-          <p className="text-sm text-gray-400">No open incidents.</p>
+          <p className="text-sm text-gray-400 mb-4">No open incidents.</p>
+        )}
+
+        {/* Past — last 60 days */}
+        {!!(stats?.pastIncidents as unknown[])?.length && (
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-4 mt-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Past incidents (last 60 days)</p>
+            <IncidentTable rows={stats!.pastIncidents as IncidentRow[]} muted />
+          </div>
         )}
       </div>
+    </div>
+  );
+}
+
+interface IncidentRow {
+  incidentId: number;
+  incidentDate: string;
+  incidentType: string;
+  severity: string;
+  safehouseName: string;
+  resolved?: boolean;
+}
+
+function IncidentTable({ rows, muted = false }: { rows: IncidentRow[]; muted?: boolean }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-xs text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-800">
+            <th className="text-left py-2 pr-4">Date</th>
+            <th className="text-left py-2 pr-4">Type</th>
+            <th className="text-left py-2 pr-4">Severity</th>
+            <th className="text-left py-2 pr-4">Safehouse</th>
+            {muted && <th className="text-left py-2">Status</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(i => (
+            <tr key={i.incidentId} className="border-b border-gray-50 dark:border-gray-800 last:border-0">
+              <td className={`py-2.5 pr-4 ${muted ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                {new Date(i.incidentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </td>
+              <td className={`py-2.5 pr-4 ${muted ? 'text-gray-500 dark:text-gray-400' : 'text-gray-800 dark:text-gray-200'}`}>{i.incidentType}</td>
+              <td className="py-2.5 pr-4">
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${riskColor[i.severity] ?? 'bg-gray-100 text-gray-500'}`}>
+                  {i.severity}
+                </span>
+              </td>
+              <td className={`py-2.5 pr-4 ${muted ? 'text-gray-400' : 'text-gray-600 dark:text-gray-400'}`}>{i.safehouseName}</td>
+              {muted && (
+                <td className="py-2.5">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${i.resolved ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800'}`}>
+                    {i.resolved ? 'Resolved' : 'Open'}
+                  </span>
+                </td>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -51,10 +51,12 @@ export default function PublicLayout() {
                 ? <button onClick={logout} className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white">Sign out</button>
                 : <Link to="/login" className="text-sm text-gray-600 dark:text-gray-300 hover:text-hh-navy transition-colors">Log in</Link>
               }
-              <Link to={user ? (isDonor ? '/donor' : '/admin') : '/register'}
-                className="bg-hh-gold text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors">
-                {user ? 'Dashboard' : 'Donate'}
-              </Link>
+              {!isAdmin && (
+                <Link to={user ? '/donor' : '/register'}
+                  className="bg-hh-gold text-white text-sm font-medium px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors">
+                  {user ? 'Dashboard' : 'Donate'}
+                </Link>
+              )}
             </div>
 
             {/* Mobile hamburger */}

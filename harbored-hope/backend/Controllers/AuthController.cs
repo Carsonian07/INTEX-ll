@@ -15,6 +15,7 @@ namespace HarboredHope.API.Controllers
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ITokenService _tokenService;
         private readonly ILogger<AuthController> _logger;
         private readonly AppDbContext _db;
@@ -22,12 +23,14 @@ namespace HarboredHope.API.Controllers
         public AuthController(
             UserManager<AppUser> userManager,
             SignInManager<AppUser> signInManager,
+            RoleManager<IdentityRole> roleManager,
             ITokenService tokenService,
             AppDbContext db,
             ILogger<AuthController> logger)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _roleManager = roleManager;
             _tokenService = tokenService;
             _db = db;
             _logger = logger;
@@ -122,6 +125,8 @@ namespace HarboredHope.API.Controllers
                 return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
 
             var supporter = await EnsureSupporterForDonorAsync(user, req.DisplayName);
+            if (!await _roleManager.RoleExistsAsync("Donor"))
+                await _roleManager.CreateAsync(new IdentityRole("Donor"));
             await _userManager.AddToRoleAsync(user, "Donor");
 
             var token = await _tokenService.GenerateTokenAsync(user);
