@@ -17,6 +17,7 @@
     }
   },
   "globalHeaders": {
+    "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' http://harbored-hope-api-duc8hjhwhrbyfxf8.canadacentral-01.azurewebsites.net https://harbored-hope-api-duc8hjhwhrbyfxf8.canadacentral-01.azurewebsites.net; frame-ancestors 'none';",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "strict-origin-when-cross-origin"

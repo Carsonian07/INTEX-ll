@@ -165,10 +165,10 @@ app.Use(async (context, next) =>
     context.Response.Headers.Append("Content-Security-Policy",
         "default-src 'self'; " +
         "script-src 'self'; " +
-        "style-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+        "font-src 'self' https://fonts.gstatic.com; " +
         "img-src 'self' data: blob:; " +
-        "font-src 'self'; " +
-        "connect-src 'self'; " +
+        "connect-src 'self' http://harbored-hope-api-duc8hjhwhrbyfxf8.canadacentral-01.azurewebsites.net https://harbored-hope-api-duc8hjhwhrbyfxf8.canadacentral-01.azurewebsites.net; " +
         "frame-ancestors 'none';");
 
     context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
